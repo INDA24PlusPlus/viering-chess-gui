@@ -2,6 +2,9 @@ use std::f32::consts::PI;
 
 use bevy::prelude::Color;
 use bevy::prelude::*;
+use bevy_mod_outline::*;
+use bevy_mod_picking::*;
+use events::{Click, Pointer};
 use vhultman_chess::Color as PieceColor;
 use vhultman_chess::*;
 
@@ -17,12 +20,116 @@ struct PieceModelData {
     black_material: Handle<StandardMaterial>,
 }
 
+#[derive(Resource)]
+struct SquareResourceData {
+    white_square: Handle<StandardMaterial>,
+    black_square: Handle<StandardMaterial>,
+    selected_square: Handle<StandardMaterial>,
+}
+
+#[derive(Resource)]
+struct GameState {
+    board_state: Position,
+    selected_piece: Option<usize>,
+}
+
+#[derive(Component)]
+struct ChessPiece {
+    _piece_type: PieceType,
+    _color: PieceColor,
+    id: usize,
+}
+
+#[derive(Component)]
+struct ChessPiecePart;
+
+#[derive(Component)]
+struct ChessSquare {
+    id: u32,
+    offset: bool,
+}
+
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, OutlinePlugin, DefaultPickingPlugins))
         .add_systems(Startup, load_resources)
         .add_systems(PostStartup, setup)
+        .add_systems(Update, handle_picking)
         .run();
+}
+
+fn handle_picking(
+    mut commands: Commands,
+    mut events: EventReader<Pointer<Click>>,
+    mut query: Query<(&Parent, &mut OutlineVolume), With<ChessPiecePart>>,
+    mut piece_query: Query<(&mut Transform, &ChessPiece, &Children)>,
+    mut tile_query: Query<(&mut Handle<StandardMaterial>, &ChessSquare)>,
+    mut game_state: ResMut<GameState>,
+    square_resource_data: Res<SquareResourceData>,
+) {
+    // Handle selection and deselection
+    for ev in events.read() {
+        if let Ok((parent, _)) = query.get_mut(ev.target) {
+            let parent_entity = commands.entity(**parent);
+
+            // set the color
+            if let Ok((_, chess_piece, _)) = piece_query.get_mut(parent_entity.id()) {
+                if game_state.selected_piece == Some(chess_piece.id) {
+                    game_state.selected_piece = None;
+                } else {
+                    game_state.selected_piece = Some(chess_piece.id);
+                }
+            }
+        }
+
+        // Update color etc. for all pieces after the change
+        let mut selected_translation: Option<Vec3> = None;
+        for (transform, piece, children) in piece_query.iter_mut() {
+            let selected = if let Some(selected_piece) = game_state.selected_piece {
+                piece.id == selected_piece
+            } else {
+                false
+            };
+
+            if selected {
+                selected_translation = Some(transform.translation);
+            }
+
+            for child in children.iter() {
+                if let Ok(mut lol) = query.get_mut(*child) {
+                    lol.1.colour = if selected {
+                        Color::srgb(0.0, 1.0, 1.0)
+                    } else {
+                        Color::srgb(1.0, 1.0, 1.0)
+                    };
+                }
+            }
+        }
+
+        let selected_square: Option<u32> = selected_translation
+            .map(|translation| ((translation.z + 3.5) * 8.0 + translation.x + 3.5) as u32);
+
+        let possible_moves: Vec<u32> = selected_square.map_or_else(Vec::new, |square| {
+            game_state
+                .board_state
+                .moves_for_square(square)
+                .iter()
+                .map(|m| m.to())
+                .collect()
+        });
+
+        for (mut material, square) in tile_query.iter_mut() {
+            let possible = possible_moves.contains(&square.id);
+
+            *material = if possible {
+                square_resource_data.selected_square.clone()
+            } else if square.offset {
+                square_resource_data.white_square.clone()
+            } else {
+                square_resource_data.black_square.clone()
+            };
+        }
+    }
 }
 
 fn spawn_piece(
@@ -31,6 +138,7 @@ fn spawn_piece(
     piece_type: PieceType,
     color: PieceColor,
     position: Vec3,
+    id: usize,
 ) {
     let material = if color == PieceColor::White {
         piece_model_data.white_material.clone()
@@ -70,24 +178,39 @@ fn spawn_piece(
     };
 
     let parent = commands
-        .spawn(SpatialBundle {
+        .spawn((SpatialBundle {
             transform: Transform {
                 translation: position,
                 scale,
                 rotation,
-                ..Default::default()
             },
             ..Default::default()
+        },))
+        .insert(PickableBundle::default())
+        .insert(ChessPiece {
+            _piece_type: piece_type,
+            _color: color,
+            id,
         })
         .id();
 
     for part in parts.iter() {
         let child = commands
-            .spawn(PbrBundle {
+            .spawn((PbrBundle {
                 mesh: part.clone(),
                 material: material.clone(),
                 ..Default::default()
+            },))
+            .insert(OutlineBundle {
+                outline: OutlineVolume {
+                    visible: true,
+                    colour: Color::srgb(1.0, 1.0, 1.0),
+                    width: 1.5,
+                },
+                mode: OutlineMode::RealVertex,
+                ..Default::default()
             })
+            .insert(ChessPiecePart)
             .id();
 
         commands.entity(parent).push_children(&[child]);
@@ -112,13 +235,18 @@ fn load_resources(
     // piece color materials
     let white_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 1.0, 1.0),
+        metallic: 0.2,
+        reflectance: 1.0,
         ..Default::default()
     });
     let black_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.0, 0.0, 0.0),
+        metallic: 0.2,
+        reflectance: 1.0,
         ..Default::default()
     });
 
+    // Setup piece resources
     commands.insert_resource(PieceModelData {
         pawn_parts: vec![pawn],
         knight_parts: vec![knight],
@@ -129,58 +257,89 @@ fn load_resources(
         white_material,
         black_material,
     });
+
+    // Setup square resources
+    commands.insert_resource(SquareResourceData {
+        white_square: materials.add(Color::srgb_u8(255, 255, 255)),
+        black_square: materials.add(Color::srgb_u8(0, 0, 0)),
+        selected_square: materials.add(StandardMaterial {
+            base_color: Color::srgb_u8(0, 255, 255),
+            unlit: true,
+            ..Default::default()
+        }),
+    });
+
+    // Setup game state and more
+    commands.insert_resource(GameState {
+        board_state: Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR").unwrap(),
+        selected_piece: None,
+    });
 }
 
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     piece_model_data: Res<PieceModelData>,
+    square_resource_data: Res<SquareResourceData>,
+    game_state: Res<GameState>,
 ) {
+    // Setup scene
     // camera
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 12.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(0.0, 10.0, 8.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..Default::default()
     });
 
     // lighting
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            shadows_enabled: true,
-            intensity: 2_500_000.0,
+    commands.spawn(DirectionalLightBundle {
+        transform: Transform::from_xyz(50.0, 50.0, 50.0).looking_at(Vec3::ZERO, Vec3::Y),
+        directional_light: DirectionalLight {
+            illuminance: 1_500.,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
 
     // board
-    let white = Color::srgb_u8(255, 255, 255);
-    let black = Color::srgb_u8(0, 0, 0);
     for x in 0..8 {
         for y in 0..8 {
             let offset = y % 2 == x % 2;
-            commands.spawn(PbrBundle {
-                mesh: meshes.add(Cuboid::new(1.0, 0.2, 1.0)),
-                material: materials.add(if offset { white } else { black }),
-                transform: Transform::from_xyz(1.0 * (x as f32 - 3.5), 0.0, 1.0 * (y as f32 - 3.5)),
-                ..default()
-            });
+            commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Cuboid::new(1.0, 0.2, 1.0)),
+                    material: if offset {
+                        square_resource_data.white_square.clone()
+                    } else {
+                        square_resource_data.black_square.clone()
+                    },
+                    transform: Transform::from_xyz(
+                        1.0 * (y as f32 - 3.5),
+                        0.0,
+                        1.0 * (x as f32 - 3.5),
+                    ),
+                    ..default()
+                })
+                .insert(ChessSquare {
+                    id: x * 8 + y,
+                    offset,
+                });
         }
     }
 
-    let game = Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR").unwrap();
-
+    let mut curr_id = 0;
     for y in 0..8 {
         for x in 0..8 {
-            if let Some(piece) = game.piece_on(y * 8 + x) {
+            if let Some(piece) = game_state.board_state.piece_on(y * 8 + x) {
                 spawn_piece(
                     &mut commands,
                     &piece_model_data,
                     piece.t,
                     piece.color,
-                    Vec3::new(-3.5 + x as f32, 0.0, -2.5 - 1.0 + y as f32),
+                    Vec3::new(-3.5 + x as f32, 0.1, -2.5 - 1.0 + y as f32),
+                    curr_id,
                 );
+
+                curr_id += 1;
             }
         }
     }

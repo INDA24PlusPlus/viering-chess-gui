@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.14.2"
+bevy_mod_outline = "0.8"
+bevy_mod_picking = "0.20.1"
 vhultman-chess = { git = "https://github.com/inda24PlusPlus/vhultman-chess.git" }
 
 [profile.dev]
