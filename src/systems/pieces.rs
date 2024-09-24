@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_mod_outline::{OutlineBundle, OutlineMode, OutlineVolume};
 use bevy_mod_picking::PickableBundle;
-use vhultman_chess::{Color as PieceColor, PieceType};
+use vhultman_chess::{Color as PieceColor, Piece, PieceType};
 
 use std::f32::consts::PI;
 
@@ -15,7 +15,7 @@ pub(crate) fn spawn_piece(
     piece_type: PieceType,
     color: PieceColor,
     position: Vec3,
-    id: usize,
+    id: u32,
 ) {
     let material = if color == PieceColor::White {
         piece_model_data.white_material.clone()
@@ -66,8 +66,10 @@ pub(crate) fn spawn_piece(
         },))
         .insert(PickableBundle::default())
         .insert(ChessPiece {
-            _piece_type: piece_type,
-            _color: color,
+            piece: Piece {
+                t: piece_type,
+                color,
+            },
             id,
         })
         .id();

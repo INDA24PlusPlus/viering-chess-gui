@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_mod_picking::PickableBundle;
 
 use crate::{ChessSquare, ClientGameState, PieceModelData, SquareResourceData};
 
@@ -47,6 +48,7 @@ pub(crate) fn setup(
                     ),
                     ..default()
                 })
+                .insert(PickableBundle::default())
                 .insert(ChessSquare {
                     id: x * 8 + y,
                     offset,

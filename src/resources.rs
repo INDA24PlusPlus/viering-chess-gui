@@ -27,5 +27,5 @@ pub(crate) struct SquareResourceData {
 #[derive(Resource)]
 pub(crate) struct ClientGameState {
     pub board_state: Position,
-    pub selected_piece: Option<usize>,
+    pub selected_piece: Option<u32>,
 }

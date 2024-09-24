@@ -1,12 +1,10 @@
 use bevy::prelude::Component;
-use vhultman_chess::Color as PieceColor;
-use vhultman_chess::PieceType;
+use vhultman_chess::Piece;
 
 #[derive(Component)]
 pub(crate) struct ChessPiece {
-    pub _piece_type: PieceType,
-    pub _color: PieceColor,
-    pub id: usize,
+    pub piece: Piece,
+    pub id: u32,
 }
 
 #[derive(Component)]
