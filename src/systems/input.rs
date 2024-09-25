@@ -6,7 +6,7 @@ use events::{Click, Pointer};
 
 use crate::{
     board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare,
-    ClientGameState, PieceModelData, SquareResourceData,
+    ClientGameState, PieceModelData, SoundEffects, SquareResourceData,
 };
 
 use super::pieces::spawn_piece;
@@ -22,6 +22,7 @@ pub fn handle_picking(
     mut game_state: ResMut<ClientGameState>,
     square_resource_data: Res<SquareResourceData>,
     piece_model_data: Res<PieceModelData>,
+    sound_effects: Res<SoundEffects>,
 ) {
     let mut square = None;
     // Handle selection and deselection
@@ -39,6 +40,10 @@ pub fn handle_picking(
                 } else if game_state.selected_piece == Some(chess_piece.id) {
                     game_state.selected_piece = None;
                 } else {
+                    commands.spawn(AudioBundle {
+                        source: sound_effects.select.clone(),
+                        ..default()
+                    });
                     game_state.selected_piece = Some(chess_piece.id);
                 }
             }
@@ -96,6 +101,7 @@ pub fn handle_picking(
                                     .map(|(entity, transform, piece, _)| (entity, transform, piece))
                                     .collect();
 
+                            let mut played_sound = false;
                             // despawn all pieces that aren't supposed to exist
                             for &(entity, ref transform, piece) in &pieces {
                                 let board_id = world_pos_to_board_id(transform.translation);
@@ -107,8 +113,20 @@ pub fn handle_picking(
                                             || piece.piece.t != correct_piece.t
                                     },
                                 ) {
+                                    commands.spawn(AudioBundle {
+                                        source: sound_effects.capture.clone(),
+                                        ..default()
+                                    });
+                                    played_sound = true;
                                     commands.entity(entity).despawn_recursive();
                                 }
+                            }
+
+                            if !played_sound {
+                                commands.spawn(AudioBundle {
+                                    source: sound_effects.valid_move.clone(),
+                                    ..default()
+                                });
                             }
 
                             // spawn all pieces that are supposed to exist but don't
@@ -129,6 +147,11 @@ pub fn handle_picking(
                                 }
                             }
                         }
+                    } else {
+                        commands.spawn(AudioBundle {
+                            source: sound_effects.illegal_move.clone(),
+                            ..default()
+                        });
                     }
                 }
             }
@@ -151,9 +174,9 @@ pub fn handle_picking(
             for child in children.iter() {
                 if let Ok(mut lol) = query.get_mut(*child) {
                     lol.1.colour = if selected {
-                        Color::srgb(0.0, 1.0, 1.0)
+                        Color::srgb_u8(232, 61, 132)
                     } else {
-                        Color::srgb(1.0, 1.0, 1.0)
+                        Color::srgb(0.0, 0.0, 0.0)
                     };
                 }
             }

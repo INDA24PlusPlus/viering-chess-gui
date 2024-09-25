@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use vhultman_chess::Position;
 
-use crate::{ClientGameState, PieceModelData, SquareResourceData};
+use crate::{ClientGameState, PieceModelData, SoundEffects, SquareResourceData};
 
-pub fn setup(
+pub(crate) fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -21,14 +23,14 @@ pub fn setup(
     // piece color materials
     let white_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 1.0, 1.0),
-        metallic: 0.2,
-        reflectance: 1.0,
+        metallic: 0.1,
+        reflectance: 0.0,
         ..Default::default()
     });
     let black_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.0, 0.0, 0.0),
-        metallic: 0.2,
-        reflectance: 1.0,
+        base_color: Color::srgb(0.15, 0.15, 0.15),
+        metallic: 0.1,
+        reflectance: 0.0,
         ..Default::default()
     });
 
@@ -49,7 +51,7 @@ pub fn setup(
         white_square: materials.add(Color::srgb_u8(255, 255, 255)),
         black_square: materials.add(Color::srgb_u8(0, 0, 0)),
         selected_square: materials.add(StandardMaterial {
-            base_color: Color::srgb_u8(0, 255, 255),
+            base_color: Color::srgb_u8(232, 61, 132),
             unlit: true,
             ..Default::default()
         }),
@@ -61,4 +63,11 @@ pub fn setup(
         selected_piece: None,
         spawned_pieces: 0,
     });
+
+    commands.insert_resource(SoundEffects {
+        select: asset_server.load("select.ogg"),
+        capture: asset_server.load("capture.ogg"),
+        illegal_move: asset_server.load("illegal.ogg"),
+        valid_move: asset_server.load("move.ogg"),
+    })
 }

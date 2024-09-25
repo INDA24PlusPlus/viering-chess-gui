@@ -84,8 +84,8 @@ pub(crate) fn spawn_piece(
             .insert(OutlineBundle {
                 outline: OutlineVolume {
                     visible: true,
-                    colour: Color::srgb(1.0, 1.0, 1.0),
-                    width: 1.5,
+                    colour: Color::srgb(0.0, 0.0, 0.0),
+                    width: 2.0,
                 },
                 mode: OutlineMode::RealVertex,
                 ..Default::default()

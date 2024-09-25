@@ -22,7 +22,7 @@ pub fn setup(
 
     // lighting
     commands.spawn(DirectionalLightBundle {
-        transform: Transform::from_xyz(50.0, 50.0, 50.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(15.0, 15.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
         directional_light: DirectionalLight {
             illuminance: 1_500.,
             ..default()
