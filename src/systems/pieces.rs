@@ -7,7 +7,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::Color;
 
-use crate::{ChessPiece, ChessPiecePart, PieceModelData};
+use crate::{ChessPiece, ChessPiecePart, ClientGameState, PieceModelData};
 
 pub(crate) fn spawn_piece(
     commands: &mut Commands,
@@ -15,7 +15,7 @@ pub(crate) fn spawn_piece(
     piece_type: PieceType,
     color: PieceColor,
     position: Vec3,
-    id: u32,
+    game_state: &mut ClientGameState,
 ) {
     let material = if color == PieceColor::White {
         piece_model_data.white_material.clone()
@@ -70,7 +70,7 @@ pub(crate) fn spawn_piece(
                 t: piece_type,
                 color,
             },
-            id,
+            id: game_state.spawned_pieces,
         })
         .id();
 
@@ -95,4 +95,6 @@ pub(crate) fn spawn_piece(
 
         commands.entity(parent).push_children(&[child]);
     }
+
+    game_state.spawned_pieces += 1;
 }

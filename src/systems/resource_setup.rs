@@ -59,5 +59,6 @@ pub(crate) fn setup(
     commands.insert_resource(ClientGameState {
         board_state: Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR").unwrap(),
         selected_piece: None,
+        spawned_pieces: 0,
     });
 }

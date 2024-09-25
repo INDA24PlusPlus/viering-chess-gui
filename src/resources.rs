@@ -28,4 +28,5 @@ pub(crate) struct SquareResourceData {
 pub(crate) struct ClientGameState {
     pub board_state: Position,
     pub selected_piece: Option<u32>,
+    pub spawned_pieces: u32,
 }

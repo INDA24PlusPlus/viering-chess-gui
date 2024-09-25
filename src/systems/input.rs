@@ -3,10 +3,15 @@ use bevy::prelude::*;
 use bevy_mod_outline::*;
 use bevy_mod_picking::*;
 use events::{Click, Pointer};
-use vhultman_chess::Piece;
 
-use crate::{ChessPiece, ChessPiecePart, ChessSquare, ClientGameState, SquareResourceData};
+use crate::{
+    ChessPiece, ChessPiecePart, ChessSquare, ClientGameState, PieceModelData, SquareResourceData,
+};
 
+use super::pieces::spawn_piece;
+
+// TODO long ass function that handles all clicking behaviour, should probably be split up
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn handle_picking(
     mut commands: Commands,
     mut events: EventReader<Pointer<Click>>,
@@ -15,6 +20,7 @@ pub(crate) fn handle_picking(
     mut tile_query: Query<(&mut Handle<StandardMaterial>, &ChessSquare)>,
     mut game_state: ResMut<ClientGameState>,
     square_resource_data: Res<SquareResourceData>,
+    piece_model_data: Res<PieceModelData>,
 ) {
     // Handle selection and deselection
     for ev in events.read() {
@@ -66,22 +72,44 @@ pub(crate) fn handle_picking(
                             // update position of the moved piece
                             piece_transform.translation = board_id_to_world_pos(square.id);
 
-                            // TODO handle check, checkmate, draw, promotion, etc, and rook during
-                            // castling
+                            // TODO handle check, checkmate, draw, promotion, etc
 
-                            // go through all pieceso on the board, if they aren't supposed to be
-                            // where they are they will be despawned
-                            for piece in piece_query.iter() {
-                                let board_id = world_pos_to_board_id(piece.1.translation);
+                            let pieces: Vec<(Entity, Mut<'_, Transform>, &ChessPiece)> =
+                                piece_query
+                                    .iter_mut()
+                                    .map(|(entity, transform, piece, _)| (entity, transform, piece))
+                                    .collect();
+
+                            // despawn all pieces that aren't supposed to exist
+                            for &(entity, ref transform, piece) in &pieces {
+                                let board_id = world_pos_to_board_id(transform.translation);
 
                                 if game_state.board_state.piece_on(board_id).map_or(
                                     true,
                                     |correct_piece| {
-                                        piece.2.piece.color != correct_piece.color
-                                            || piece.2.piece.t != correct_piece.t
+                                        piece.piece.color != correct_piece.color
+                                            || piece.piece.t != correct_piece.t
                                     },
                                 ) {
-                                    commands.entity(piece.0).despawn_recursive();
+                                    commands.entity(entity).despawn_recursive();
+                                }
+                            }
+
+                            // spawn all pieces that are supposed to exist but don't
+                            for i in 0..64 {
+                                if let Some(piece) = game_state.board_state.piece_on(i) {
+                                    if !pieces.iter().any(|(_, transform, _)| {
+                                        world_pos_to_board_id(transform.translation) != i
+                                    }) {
+                                        spawn_piece(
+                                            &mut commands,
+                                            &piece_model_data,
+                                            piece.t,
+                                            piece.color,
+                                            board_id_to_world_pos(i),
+                                            &mut game_state,
+                                        );
+                                    }
                                 }
                             }
                         }

@@ -10,7 +10,7 @@ pub(crate) fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     piece_model_data: Res<PieceModelData>,
     square_resource_data: Res<SquareResourceData>,
-    game_state: Res<ClientGameState>,
+    mut game_state: ResMut<ClientGameState>,
 ) {
     // Setup scene
     // camera
@@ -56,7 +56,6 @@ pub(crate) fn setup(
         }
     }
 
-    let mut curr_id = 0;
     for y in 0..8 {
         for x in 0..8 {
             if let Some(piece) = game_state.board_state.piece_on(y * 8 + x) {
@@ -65,11 +64,9 @@ pub(crate) fn setup(
                     &piece_model_data,
                     piece.t,
                     piece.color,
-                    Vec3::new(-3.5 + x as f32, 0.1, -2.5 - 1.0 + y as f32),
-                    curr_id,
+                    Vec3::new(-3.5 + x as f32, 0.1, -3.5 + y as f32),
+                    &mut game_state,
                 );
-
-                curr_id += 1;
             }
         }
     }
