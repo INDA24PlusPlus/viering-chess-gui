@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bevy::prelude::*;
 use vhultman_chess::Position;
 
@@ -28,7 +26,7 @@ pub(crate) fn setup(
         ..Default::default()
     });
     let black_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.15, 0.15, 0.15),
+        base_color: Color::srgb(0.25, 0.25, 0.25),
         metallic: 0.1,
         reflectance: 0.0,
         ..Default::default()

@@ -131,7 +131,6 @@ pub fn handle_picking(
 
                             // spawn all pieces that are supposed to exist but don't
                             for i in 0..64 {
-                                println!("{}: {:?}", i, game_state.board_state.piece_on(i));
                                 if let Some(piece) = game_state.board_state.piece_on(i) {
                                     if !pieces.iter().any(|(_, transform, _)| {
                                         world_pos_to_board_id(transform.translation) == i
