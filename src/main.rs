@@ -11,6 +11,9 @@ use resources::*;
 mod systems;
 use systems::{input, resource_setup, setup};
 
+mod utils;
+use utils::*;
+
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, OutlinePlugin, DefaultPickingPlugins))

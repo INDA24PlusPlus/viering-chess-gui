@@ -5,14 +5,15 @@ use bevy_mod_picking::*;
 use events::{Click, Pointer};
 
 use crate::{
-    ChessPiece, ChessPiecePart, ChessSquare, ClientGameState, PieceModelData, SquareResourceData,
+    board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare,
+    ClientGameState, PieceModelData, SquareResourceData,
 };
 
 use super::pieces::spawn_piece;
 
-// TODO long ass function that handles all clicking behaviour, should probably be split up
+// TODO long ass function that handles all clicking behaviour, should definitely be split up
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn handle_picking(
+pub fn handle_picking(
     mut commands: Commands,
     mut events: EventReader<Pointer<Click>>,
     mut query: Query<(&Parent, &mut OutlineVolume), With<ChessPiecePart>>,
@@ -22,23 +23,38 @@ pub(crate) fn handle_picking(
     square_resource_data: Res<SquareResourceData>,
     piece_model_data: Res<PieceModelData>,
 ) {
+    let mut square = None;
     // Handle selection and deselection
     for ev in events.read() {
-        // Clicked a piece
+        // Clicked a piece (might have selected, deselected, attempted to move, etc)
+        let mut might_move_piece = false;
         if let Ok((parent, _)) = query.get_mut(ev.target) {
             let parent_entity = commands.entity(**parent);
 
             // set selected piece
-            if let Ok((_, _, chess_piece, _)) = piece_query.get_mut(parent_entity.id()) {
-                if game_state.selected_piece == Some(chess_piece.id) {
+            if let Ok((_, transform, chess_piece, _)) = piece_query.get_mut(parent_entity.id()) {
+                if chess_piece.piece.color != game_state.board_state.current_side() {
+                    square = Some(world_pos_to_board_id(transform.translation));
+                    might_move_piece = true;
+                } else if game_state.selected_piece == Some(chess_piece.id) {
                     game_state.selected_piece = None;
                 } else {
                     game_state.selected_piece = Some(chess_piece.id);
                 }
             }
         } else {
-            // TODO can also click enemy team piece, right?
-            if let Ok((_, square)) = tile_query.get_mut(ev.target) {
+            might_move_piece = true;
+        }
+
+        // attempting to move a piece
+        if might_move_piece {
+            let mut square: Option<u32> = square;
+
+            if let Ok((_, square_val)) = tile_query.get_mut(ev.target) {
+                square = Some(square_val.id)
+            }
+
+            if let Some(square) = square {
                 if let Some(selected_piece_id) = game_state.selected_piece {
                     // we clicked a square and a piece is selected
 
@@ -61,16 +77,16 @@ pub(crate) fn handle_picking(
                         .map(|m| m.to())
                         .collect();
 
-                    if possible_moves.contains(&square.id) {
+                    if possible_moves.contains(&square) {
                         let possible_move =
-                            game_state.board_state.get_move(piece_square_id, square.id);
+                            game_state.board_state.get_move(piece_square_id, square);
 
                         if let Some(m) = possible_move {
                             // Here we make the move
                             game_state.board_state.make_move(m);
 
                             // update position of the moved piece
-                            piece_transform.translation = board_id_to_world_pos(square.id);
+                            piece_transform.translation = board_id_to_world_pos(square);
 
                             // TODO handle check, checkmate, draw, promotion, etc
 
@@ -166,16 +182,4 @@ pub(crate) fn handle_picking(
             };
         }
     }
-}
-
-fn world_pos_to_board_id(world_pos: Vec3) -> u32 {
-    ((world_pos.z + 3.5) * 8.0 + world_pos.x + 3.5) as u32
-}
-
-fn board_id_to_world_pos(board_id: u32) -> Vec3 {
-    Vec3::new(
-        (board_id % 8) as f32 - 3.5,
-        0.1,
-        (board_id / 8) as f32 - 3.5,
-    )
 }

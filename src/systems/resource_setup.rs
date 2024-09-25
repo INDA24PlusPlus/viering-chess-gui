@@ -3,7 +3,7 @@ use vhultman_chess::Position;
 
 use crate::{ClientGameState, PieceModelData, SquareResourceData};
 
-pub(crate) fn setup(
+pub fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,

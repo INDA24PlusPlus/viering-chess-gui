@@ -1,18 +1,19 @@
 use bevy::prelude::*;
 use bevy_mod_picking::PickableBundle;
 
-use crate::{ChessSquare, ClientGameState, PieceModelData, SquareResourceData};
+use crate::{
+    board_id_to_world_pos, ChessSquare, ClientGameState, PieceModelData, SquareResourceData,
+};
 
 use super::pieces;
 
-pub(crate) fn setup(
+pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     piece_model_data: Res<PieceModelData>,
     square_resource_data: Res<SquareResourceData>,
     mut game_state: ResMut<ClientGameState>,
 ) {
-    // Setup scene
     // camera
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0.0, 10.0, 8.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -56,18 +57,17 @@ pub(crate) fn setup(
         }
     }
 
-    for y in 0..8 {
-        for x in 0..8 {
-            if let Some(piece) = game_state.board_state.piece_on(y * 8 + x) {
-                pieces::spawn_piece(
-                    &mut commands,
-                    &piece_model_data,
-                    piece.t,
-                    piece.color,
-                    Vec3::new(-3.5 + x as f32, 0.1, -3.5 + y as f32),
-                    &mut game_state,
-                );
-            }
+    // pieces
+    for i in 0..64 {
+        if let Some(piece) = game_state.board_state.piece_on(i) {
+            pieces::spawn_piece(
+                &mut commands,
+                &piece_model_data,
+                piece.t,
+                piece.color,
+                board_id_to_world_pos(i),
+                &mut game_state,
+            );
         }
     }
 }
