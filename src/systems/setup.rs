@@ -7,7 +7,7 @@ use crate::{
 
 use super::pieces;
 
-pub fn setup(
+pub fn setup_game_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     piece_model_data: Res<PieceModelData>,
