@@ -37,6 +37,13 @@ pub fn handle_picking(
                 if chess_piece.piece.color != game_state.board_state.current_side() {
                     square = Some(world_pos_to_board_id(transform.translation));
                     might_move_piece = true;
+
+                    if game_state.selected_piece.is_none() {
+                        commands.spawn(AudioBundle {
+                            source: sound_effects.illegal_move.clone(),
+                            ..default()
+                        });
+                    }
                 } else if game_state.selected_piece == Some(chess_piece.id) {
                     game_state.selected_piece = None;
                 } else {
