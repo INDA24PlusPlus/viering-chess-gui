@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_mod_outline::*;
 use bevy_mod_picking::*;
 use events::{Click, Pointer};
+use vhultman_chess::PieceType;
 
 use crate::{
     board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare,
@@ -93,8 +94,21 @@ pub fn handle_picking(
                         let possible_move =
                             game_state.board_state.get_move(piece_square_id, square);
 
-                        if let Some(m) = possible_move {
+                        if let Some(mut m) = possible_move {
                             // Here we make the move
+                            if m.is_promotion() {
+                                m.set_promotion_piece(PieceType::Queen);
+
+                                spawn_piece(
+                                    &mut commands,
+                                    &piece_model_data,
+                                    m.promotion_piece(),
+                                    game_state.board_state.current_side(),
+                                    board_id_to_world_pos(square),
+                                    &mut game_state,
+                                );
+                            }
+
                             game_state.board_state.make_move(m);
 
                             // update position of the moved piece

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use vhultman_chess::{Color as PieceColor, GameState};
+use vhultman_chess::{Color as PieceColor, GameState, PieceType};
 
 use crate::ClientGameState;
 
@@ -9,17 +9,17 @@ pub struct TurnText;
 #[derive(Component)]
 pub struct GameStateText;
 
-pub fn setup_ui(mut commands: Commands) {
+#[derive(Component)]
+pub struct GameStatePopupWindow;
+
+#[derive(Component)]
+pub struct PromotionPopupWindow;
+
+pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(NodeBundle {
             style: Style {
-                aspect_ratio: Some(2.0),
-                padding: UiRect {
-                    left: Val::Px(12.0),
-                    right: Val::Px(12.0),
-                    top: Val::Px(12.0),
-                    bottom: Val::Px(12.0),
-                },
+                padding: UiRect::all(Val::Px(12.0)),
                 margin: UiRect {
                     left: Val::Px(12.0),
                     top: Val::Px(12.0),
@@ -46,24 +46,149 @@ pub fn setup_ui(mut commands: Commands) {
                 ),
                 TurnText,
             ));
-        })
+        });
+
+    // game state window
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Vw(100.0),
+                    height: Val::Vh(100.0),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    ..Default::default()
+                },
+                border_radius: BorderRadius::all(Val::Px(6.0)),
+                ..Default::default()
+            },
+            GameStatePopupWindow,
+        ))
         .with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section(
-                    "game state text",
-                    TextStyle {
-                        font_size: 20.0,
-                        color: Color::srgb_u8(0, 0, 0),
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        padding: UiRect::all(Val::Px(12.0)),
+                        flex_direction: FlexDirection::Column,
+                        display: Display::Flex,
+                        row_gap: Val::Px(6.0),
+                        ..Default::default()
+                    },
+                    border_radius: BorderRadius::all(Val::Px(6.0)),
+                    background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn((
+                        TextBundle::from_section(
+                            "game state text",
+                            TextStyle {
+                                font_size: 20.0,
+                                color: Color::srgb_u8(0, 0, 0),
+                                ..default()
+                            },
+                        ),
+                        GameStateText,
+                    ));
+                });
+        });
+
+    // promotion window
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Vw(100.0),
+                    height: Val::Vh(100.0),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    display: Display::None,
+                    ..Default::default()
+                },
+                border_radius: BorderRadius::all(Val::Px(6.0)),
+                ..Default::default()
+            },
+            PromotionPopupWindow,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        padding: UiRect::all(Val::Px(12.0)),
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        display: Display::Flex,
+                        row_gap: Val::Px(12.0),
                         ..default()
                     },
-                ),
-                GameStateText,
-            ));
+                    border_radius: BorderRadius::all(Val::Px(6.0)),
+                    background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Choose promotion",
+                        TextStyle {
+                            font_size: 24.0,
+                            color: Color::srgb_u8(0, 0, 0),
+                            ..default()
+                        },
+                    ));
+
+                    parent
+                        .spawn(NodeBundle {
+                            style: Style {
+                                flex_direction: FlexDirection::Row,
+                                display: Display::Flex,
+                                column_gap: Val::Px(6.0),
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .with_children(|parent| {
+                            let button_style = Style {
+                                width: Val::Px(64.0),
+                                aspect_ratio: Some(1.0),
+                                padding: UiRect::all(Val::Px(8.0)),
+                                ..default()
+                            };
+
+                            let buttons = [
+                                "sprites/white_knight.png",
+                                "sprites/white_bishop.png",
+                                "sprites/white_rook.png",
+                                "sprites/white_queen.png",
+                            ];
+
+                            for button in buttons.iter() {
+                                parent
+                                    .spawn(ButtonBundle {
+                                        style: button_style.clone(),
+                                        border_radius: BorderRadius::all(Val::Px(6.0)),
+                                        background_color: Srgba::rgb_u8(255, 255, 255).into(),
+                                        ..default()
+                                    })
+                                    .with_children(|parent| {
+                                        parent.spawn(ImageBundle {
+                                            image: UiImage::new(asset_server.load(*button)),
+                                            ..default()
+                                        });
+                                    });
+                            }
+                        });
+                });
         });
 }
 
 pub fn update_ui(
     mut text_query: Query<(&mut Text, Option<&TurnText>, Option<&GameStateText>)>,
+    mut windows_query: Query<(
+        &mut Style,
+        Option<&GameStatePopupWindow>,
+        Option<&PromotionPopupWindow>,
+    )>,
     mut game_state: ResMut<ClientGameState>,
 ) {
     for (mut text, turn_text, game_state_text) in text_query.iter_mut() {
@@ -78,10 +203,10 @@ pub fn update_ui(
             );
         }
 
-        // Update game state text TODO how to get check????? SHOULD BE SHOWN HERE
+        // Update game state text
         if game_state_text.is_some() {
             text.sections[0].value = match game_state.board_state.check_game_state() {
-                GameState::Playing => "balls",
+                GameState::Playing => "",
                 GameState::Checkmate => "Checkmate",
                 GameState::Stalemate => "Stalemate",
                 GameState::DrawByRepetition => "Draw",
@@ -89,5 +214,24 @@ pub fn update_ui(
             }
             .to_string();
         }
+    }
+
+    for (mut style, game_state_wnd, promotion_wnd) in windows_query.iter_mut() {
+        if game_state_wnd.is_some() {
+            // popup window logic
+            style.display = match game_state.board_state.check_game_state() {
+                GameState::Playing => Display::None,
+                _ => Display::Flex,
+            };
+        }
+
+        // TODO implement promotion here...
+        //if promotion_wnd.is_some() {
+        //    style.display = if game_state.promoting.is_some() {
+        //        Display::Flex
+        //    } else {
+        //        Display::None
+        //    };
+        //}
     }
 }
