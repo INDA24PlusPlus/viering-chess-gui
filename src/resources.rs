@@ -31,6 +31,8 @@ pub struct ClientGameState {
     pub board_state: Position,
     pub selected_piece: Option<u32>,
     pub spawned_pieces: u32,
+    pub board_dirty: bool,
+    pub last_move: Option<ChessMove>,
 }
 
 #[derive(Resource)]

@@ -60,6 +60,8 @@ pub(crate) fn setup(
         board_state: Position::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR").unwrap(),
         selected_piece: None,
         spawned_pieces: 0,
+        board_dirty: true,
+        last_move: None,
     });
 
     commands.insert_resource(SoundEffects {

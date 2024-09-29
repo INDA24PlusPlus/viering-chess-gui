@@ -6,13 +6,10 @@ use events::{Click, Pointer};
 use vhultman_chess::PieceType;
 
 use crate::{
-    board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare,
-    ClientGameState, PieceModelData, SoundEffects, SquareResourceData,
+    world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare, ClientGameState, SoundEffects,
+    SquareResourceData,
 };
 
-use super::pieces::spawn_piece;
-
-// TODO long ass function that handles all clicking behaviour, should definitely be split up
 #[allow(clippy::too_many_arguments)]
 pub fn handle_picking(
     mut commands: Commands,
@@ -22,7 +19,6 @@ pub fn handle_picking(
     mut tile_query: Query<(&mut Handle<StandardMaterial>, &ChessSquare)>,
     mut game_state: ResMut<ClientGameState>,
     square_resource_data: Res<SquareResourceData>,
-    piece_model_data: Res<PieceModelData>,
     sound_effects: Res<SoundEffects>,
 ) {
     let mut square = None;
@@ -72,11 +68,11 @@ pub fn handle_picking(
                     // we clicked a square and a piece is selected
 
                     // get square id of the selected piece
-                    let (piece_square_id, mut piece_transform) = piece_query
+                    let piece_square_id = piece_query
                         .iter_mut()
                         .find_map(|(_, transform, piece, _)| {
                             if piece.id == selected_piece_id {
-                                Some((world_pos_to_board_id(transform.translation), transform))
+                                Some(world_pos_to_board_id(transform.translation))
                             } else {
                                 None
                             }
@@ -99,74 +95,19 @@ pub fn handle_picking(
                             if m.is_promotion() {
                                 m.set_promotion_piece(PieceType::Queen);
 
-                                spawn_piece(
-                                    &mut commands,
-                                    &piece_model_data,
-                                    m.promotion_piece(),
-                                    game_state.board_state.current_side(),
-                                    board_id_to_world_pos(square),
-                                    &mut game_state,
-                                );
+                                //spawn_piece(
+                                //    &mut commands,
+                                //    &piece_model_data,
+                                //    m.promotion_piece(),
+                                //    game_state.board_state.current_side(),
+                                //    board_id_to_world_pos(square),
+                                //    &mut game_state,
+                                //);
                             }
 
                             game_state.board_state.make_move(m);
-
-                            // update position of the moved piece
-                            piece_transform.translation = board_id_to_world_pos(square);
-
-                            // TODO handle check, checkmate, draw, promotion, etc
-
-                            let pieces: Vec<(Entity, Mut<'_, Transform>, &ChessPiece)> =
-                                piece_query
-                                    .iter_mut()
-                                    .map(|(entity, transform, piece, _)| (entity, transform, piece))
-                                    .collect();
-
-                            let mut played_sound = false;
-                            // despawn all pieces that aren't supposed to exist
-                            for &(entity, ref transform, piece) in &pieces {
-                                let board_id = world_pos_to_board_id(transform.translation);
-
-                                if game_state.board_state.piece_on(board_id).map_or(
-                                    true,
-                                    |correct_piece| {
-                                        piece.piece.color != correct_piece.color
-                                            || piece.piece.t != correct_piece.t
-                                    },
-                                ) {
-                                    commands.spawn(AudioBundle {
-                                        source: sound_effects.capture.clone(),
-                                        ..default()
-                                    });
-                                    played_sound = true;
-                                    commands.entity(entity).despawn_recursive();
-                                }
-                            }
-
-                            if !played_sound {
-                                commands.spawn(AudioBundle {
-                                    source: sound_effects.valid_move.clone(),
-                                    ..default()
-                                });
-                            }
-
-                            // spawn all pieces that are supposed to exist but don't
-                            for i in 0..64 {
-                                if let Some(piece) = game_state.board_state.piece_on(i) {
-                                    if !pieces.iter().any(|(_, transform, _)| {
-                                        world_pos_to_board_id(transform.translation) == i
-                                    }) {
-                                        spawn_piece(
-                                            &mut commands,
-                                            &piece_model_data,
-                                            piece.t,
-                                            piece.color,
-                                            board_id_to_world_pos(i),
-                                            &mut game_state,
-                                        );
-                                    }
-                                }
-                            }
+                            game_state.last_move = Some(m);
+                            game_state.board_dirty = true;
                         }
                     } else {
                         commands.spawn(AudioBundle {

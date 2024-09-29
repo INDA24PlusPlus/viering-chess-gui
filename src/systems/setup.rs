@@ -5,7 +5,7 @@ use crate::{
     board_id_to_world_pos, ChessSquare, ClientGameState, PieceModelData, SquareResourceData,
 };
 
-use super::pieces;
+use super::board;
 
 pub fn setup_game_scene(
     mut commands: Commands,
@@ -60,7 +60,7 @@ pub fn setup_game_scene(
     // pieces
     for i in 0..64 {
         if let Some(piece) = game_state.board_state.piece_on(i) {
-            pieces::spawn_piece(
+            board::spawn_piece(
                 &mut commands,
                 &piece_model_data,
                 piece.t,
