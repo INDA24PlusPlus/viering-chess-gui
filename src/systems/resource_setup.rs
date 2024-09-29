@@ -62,6 +62,7 @@ pub(crate) fn setup(
         spawned_pieces: 0,
         board_dirty: true,
         last_move: None,
+        pending_promotion_move: None,
     });
 
     commands.insert_resource(SoundEffects {

@@ -33,6 +33,7 @@ pub struct ClientGameState {
     pub spawned_pieces: u32,
     pub board_dirty: bool,
     pub last_move: Option<ChessMove>,
+    pub pending_promotion_move: Option<ChessMove>,
 }
 
 #[derive(Resource)]

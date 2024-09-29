@@ -24,7 +24,12 @@ fn main() {
         .add_systems(PostStartup, (setup_game_scene, setup_ui))
         .add_systems(
             Update,
-            (input::handle_picking, update_ui, board::update_board),
+            (
+                input::handle_picking,
+                update_ui,
+                promotion_menu_action,
+                board::update_board,
+            ),
         )
         .run();
 }

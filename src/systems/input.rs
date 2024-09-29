@@ -92,8 +92,11 @@ pub fn handle_picking(
 
                         if let Some(mut m) = possible_move {
                             // Here we make the move
+                            // Why tf do i need to know promotion type before making the move :sob:
                             if m.is_promotion() {
                                 m.set_promotion_piece(PieceType::Queen);
+
+                                game_state.pending_promotion_move = Some(m);
 
                                 //spawn_piece(
                                 //    &mut commands,
@@ -103,11 +106,13 @@ pub fn handle_picking(
                                 //    board_id_to_world_pos(square),
                                 //    &mut game_state,
                                 //);
-                            }
+                            } else {
+                                game_state.pending_promotion_move = None;
 
-                            game_state.board_state.make_move(m);
-                            game_state.last_move = Some(m);
-                            game_state.board_dirty = true;
+                                game_state.board_state.make_move(m);
+                                game_state.last_move = Some(m);
+                                game_state.board_dirty = true;
+                            }
                         }
                     } else {
                         commands.spawn(AudioBundle {

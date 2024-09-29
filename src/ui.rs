@@ -15,6 +15,14 @@ pub struct GameStatePopupWindow;
 #[derive(Component)]
 pub struct PromotionPopupWindow;
 
+#[derive(Component, Clone, Copy, Debug)]
+pub enum PromotionMenuAction {
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+}
+
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(NodeBundle {
@@ -156,23 +164,26 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             };
 
                             let buttons = [
-                                "sprites/white_knight.png",
-                                "sprites/white_bishop.png",
-                                "sprites/white_rook.png",
-                                "sprites/white_queen.png",
+                                (PromotionMenuAction::Knight, "sprites/white_knight.png"),
+                                (PromotionMenuAction::Bishop, "sprites/white_bishop.png"),
+                                (PromotionMenuAction::Rook, "sprites/white_rook.png"),
+                                (PromotionMenuAction::Queen, "sprites/white_queen.png"),
                             ];
 
-                            for button in buttons.iter() {
+                            for (action, texture) in buttons.iter() {
                                 parent
-                                    .spawn(ButtonBundle {
-                                        style: button_style.clone(),
-                                        border_radius: BorderRadius::all(Val::Px(6.0)),
-                                        background_color: Srgba::rgb_u8(255, 255, 255).into(),
-                                        ..default()
-                                    })
+                                    .spawn((
+                                        ButtonBundle {
+                                            style: button_style.clone(),
+                                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                                            background_color: Srgba::rgb_u8(255, 255, 255).into(),
+                                            ..default()
+                                        },
+                                        *action,
+                                    ))
                                     .with_children(|parent| {
                                         parent.spawn(ImageBundle {
-                                            image: UiImage::new(asset_server.load(*button)),
+                                            image: UiImage::new(asset_server.load(*texture)),
                                             ..default()
                                         });
                                     });
@@ -225,13 +236,33 @@ pub fn update_ui(
             };
         }
 
-        // TODO implement promotion here...
-        //if promotion_wnd.is_some() {
-        //    style.display = if game_state.promoting.is_some() {
-        //        Display::Flex
-        //    } else {
-        //        Display::None
-        //    };
-        //}
+        if promotion_wnd.is_some() {
+            if game_state.pending_promotion_move.is_some() {
+                style.display = Display::Flex;
+            } else {
+                style.display = Display::None;
+            }
+        }
+    }
+}
+
+pub(crate) fn promotion_menu_action(
+    menu_action_query: Query<(&PromotionMenuAction, &Interaction), With<Button>>,
+    mut game_state: ResMut<ClientGameState>,
+) {
+    for (action, interaction) in &menu_action_query {
+        if *interaction == Interaction::Pressed {
+            if let Some(mut m) = game_state.pending_promotion_move {
+                m.set_promotion_piece(match action {
+                    PromotionMenuAction::Knight => PieceType::Knight,
+                    PromotionMenuAction::Bishop => PieceType::Bishop,
+                    PromotionMenuAction::Rook => PieceType::Rook,
+                    PromotionMenuAction::Queen => PieceType::Queen,
+                });
+                game_state.board_state.make_move(m);
+                game_state.board_dirty = true;
+                game_state.pending_promotion_move = None;
+            }
+        }
     }
 }
