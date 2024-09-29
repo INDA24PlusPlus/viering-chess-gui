@@ -124,7 +124,6 @@ pub(crate) fn update_board(
 
     let mut entities_to_despawn: Vec<Entity> = Vec::new();
 
-    // move pieces and identify pieces to despawn
     for (entity, mut transform, piece) in pieces {
         if let Some(last_move) = game_state.last_move {
             if transform.translation == board_id_to_world_pos(last_move.from()) {
