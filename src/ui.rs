@@ -259,8 +259,8 @@ pub(crate) fn promotion_menu_action(
                     PromotionMenuAction::Rook => PieceType::Rook,
                     PromotionMenuAction::Queen => PieceType::Queen,
                 });
-                game_state.board_state.check_game_state();
                 game_state.board_state.make_move(m);
+                game_state.last_move = Some(m);
                 game_state.board_dirty = true;
                 game_state.pending_promotion_move = None;
             }

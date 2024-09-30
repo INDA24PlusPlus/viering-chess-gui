@@ -113,6 +113,26 @@ pub(crate) fn update_board(
         return;
     }
 
+    game_state.board_state.check_game_state();
+
+    if let Some(m) = game_state.last_move {
+        if m.is_promotion() {
+            let balle = m.promotion_piece();
+            spawn_piece(
+                &mut commands,
+                &piece_model_data,
+                balle,
+                if game_state.board_state.current_side() == PieceColor::White {
+                    PieceColor::Black
+                } else {
+                    PieceColor::White
+                },
+                board_id_to_world_pos(m.to()),
+                &mut game_state,
+            );
+        }
+    }
+
     game_state.board_dirty = false;
 
     let should_play_sound = game_state.last_move.is_some();
