@@ -4,8 +4,8 @@ use bevy::{
     pbr::StandardMaterial,
     prelude::{Mesh, Resource},
 };
+use vhultman_chess::ChessMove;
 use vhultman_chess::Position;
-use vhultman_chess::{ChessMove, Color as PieceColor};
 
 #[derive(Resource)]
 pub struct PieceModelData {

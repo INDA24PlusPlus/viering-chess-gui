@@ -31,5 +31,6 @@ fn main() {
                 board::update_board,
             ),
         )
+        .insert_resource(ClearColor(Color::srgb_u8(77, 79, 84)))
         .run();
 }
