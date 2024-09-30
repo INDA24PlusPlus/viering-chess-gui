@@ -117,11 +117,10 @@ pub(crate) fn update_board(
 
     if let Some(m) = game_state.last_move {
         if m.is_promotion() {
-            let balle = m.promotion_piece();
             spawn_piece(
                 &mut commands,
                 &piece_model_data,
-                balle,
+                m.promotion_piece(),
                 if game_state.board_state.current_side() == PieceColor::White {
                     PieceColor::Black
                 } else {
