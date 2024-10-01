@@ -35,11 +35,3 @@ pub struct ClientGameState {
     pub last_move: Option<ChessMove>,
     pub pending_promotion_move: Option<ChessMove>,
 }
-
-#[derive(Resource)]
-pub struct SoundEffects {
-    pub select: Handle<AudioSource>,
-    pub capture: Handle<AudioSource>,
-    pub valid_move: Handle<AudioSource>,
-    pub illegal_move: Handle<AudioSource>,
-}

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use vhultman_chess::Position;
 
-use crate::{ClientGameState, PieceModelData, SoundEffects, SquareResourceData};
+use crate::{ClientGameState, PieceModelData, SquareResourceData};
 
 pub(crate) fn setup(
     mut commands: Commands,
@@ -64,11 +64,4 @@ pub(crate) fn setup(
         last_move: None,
         pending_promotion_move: None,
     });
-
-    commands.insert_resource(SoundEffects {
-        select: asset_server.load("select.ogg"),
-        capture: asset_server.load("capture.ogg"),
-        illegal_move: asset_server.load("illegal.ogg"),
-        valid_move: asset_server.load("move.ogg"),
-    })
 }

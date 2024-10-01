@@ -115,7 +115,6 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     display: Display::None,
                     ..Default::default()
                 },
-                border_radius: BorderRadius::all(Val::Px(6.0)),
                 ..Default::default()
             },
             PromotionPopupWindow,
@@ -156,10 +155,15 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             ..default()
                         })
                         .with_children(|parent| {
-                            let button_style = Style {
-                                width: Val::Px(64.0),
-                                aspect_ratio: Some(1.0),
-                                padding: UiRect::all(Val::Px(8.0)),
+                            let button_bundle = ButtonBundle {
+                                style: Style {
+                                    width: Val::Px(64.0),
+                                    aspect_ratio: Some(1.0),
+                                    padding: UiRect::all(Val::Px(8.0)),
+                                    ..default()
+                                },
+                                border_radius: BorderRadius::all(Val::Px(6.0)),
+                                background_color: Srgba::rgb_u8(255, 255, 255).into(),
                                 ..default()
                             };
 
@@ -172,15 +176,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                             for (action, texture) in buttons.iter() {
                                 parent
-                                    .spawn((
-                                        ButtonBundle {
-                                            style: button_style.clone(),
-                                            border_radius: BorderRadius::all(Val::Px(6.0)),
-                                            background_color: Srgba::rgb_u8(255, 255, 255).into(),
-                                            ..default()
-                                        },
-                                        *action,
-                                    ))
+                                    .spawn((button_bundle.clone(), *action))
                                     .with_children(|parent| {
                                         parent.spawn(ImageBundle {
                                             image: UiImage::new(asset_server.load(*texture)),
@@ -251,6 +247,7 @@ pub(crate) fn promotion_menu_action(
     mut game_state: ResMut<ClientGameState>,
 ) {
     for (action, interaction) in &menu_action_query {
+        // Click on one of the promotion piece buttons
         if *interaction == Interaction::Pressed {
             if let Some(mut m) = game_state.pending_promotion_move {
                 m.set_promotion_piece(match action {
