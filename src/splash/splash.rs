@@ -35,7 +35,7 @@ pub(crate) fn splash_setup(mut commands: Commands, asset_server: Res<AssetServer
                     width: Val::Vw(33.0),
                     ..default()
                 },
-                image: UiImage::new(asset_server.load("kebab.png")),
+                image: UiImage::new(asset_server.load("sprites/kebab.png")),
                 ..default()
             });
             parent.spawn(TextBundle::from_section(
@@ -76,15 +76,18 @@ pub(crate) fn splash_update(
         .next()
         .expect("Couldn't find a FadeOverlay element");
 
+    // start as fully faded
     if *timer == 0.0 {
         *opacity = 1.0;
     }
 
     *timer += time.delta_seconds();
 
+    // reduce fade
     if *timer >= 0.5 && *timer <= 4.0 {
         *opacity = (*opacity - time.delta_seconds() * 2.0).max(0.0);
 
+        // play the amazing kebab splash screen sound effect
         if !*played_sfx {
             *played_sfx = true;
             commands.spawn(AudioBundle {
@@ -93,6 +96,8 @@ pub(crate) fn splash_update(
             });
         }
     }
+
+    // fade again after a while
     if *timer >= 4.0 {
         *opacity = (*opacity + time.delta_seconds()).min(1.0);
 

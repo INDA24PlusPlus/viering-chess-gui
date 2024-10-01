@@ -9,14 +9,14 @@ pub(crate) fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // piece meshes
-    let knight: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh0/Primitive0");
-    let queen: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh1/Primitive0");
-    let king: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh2/Primitive0");
-    let pawn: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh3/Primitive0");
-    let bishop_p1: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh4/Primitive0");
-    let bishop_p2: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh5/Primitive0");
-    let rook_p1: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh6/Primitive0");
-    let rook_p2: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh7/Primitive0");
+    let knight: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh0/Primitive0");
+    let queen: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh1/Primitive0");
+    let king: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh2/Primitive0");
+    let pawn: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh3/Primitive0");
+    let bishop_p1: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh4/Primitive0");
+    let bishop_p2: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh5/Primitive0");
+    let rook_p1: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh6/Primitive0");
+    let rook_p2: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh7/Primitive0");
 
     // piece color materials
     let white_material = materials.add(StandardMaterial {

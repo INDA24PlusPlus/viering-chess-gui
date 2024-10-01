@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_simple_text_input::TextInputBundle;
+use bevy_simple_text_input::{TextInputBundle, TextInputValue};
 
 use crate::general::resources::SoundEffects;
 
@@ -149,14 +149,28 @@ pub(crate) fn menu_update(
         (&MenuAction, &Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<Button>),
     >,
+    join_address_query: Query<&TextInputValue>,
     mut commands: Commands,
     sound_effects: Res<SoundEffects>,
 ) {
     for (action, interaction, mut background_color) in &mut button_query {
         match *interaction {
             Interaction::Pressed => {
-                println!("Pressed {:?} button", action);
+                match *action {
+                    MenuAction::Host => {
+                        println!("Hosting");
+                    }
+                    MenuAction::Join => {
+                        let join_address_element = join_address_query
+                            .iter()
+                            .next()
+                            .expect("No join address element");
 
+                        println!("Joining {}", join_address_element.0);
+                    }
+                }
+
+                // click sound
                 commands.spawn(AudioBundle {
                     source: sound_effects.click.clone(),
                     ..default()
