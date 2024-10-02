@@ -5,10 +5,11 @@ use bevy_mod_picking::*;
 use events::{Click, Pointer};
 use vhultman_chess::PieceType;
 
-use crate::{
-    world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare, ClientGameState, SoundEffects,
+use crate::game::{
+    world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare, ClientGameState,
     SquareResourceData,
 };
+use crate::SoundEffects;
 
 #[allow(clippy::too_many_arguments)]
 pub fn handle_picking(

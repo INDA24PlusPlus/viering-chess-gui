@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use vhultman_chess::{Color as PieceColor, GameState, PieceType};
 
-use crate::ClientGameState;
+use crate::game::ClientGameState;
 
 #[derive(Component)]
 pub struct TurnText;

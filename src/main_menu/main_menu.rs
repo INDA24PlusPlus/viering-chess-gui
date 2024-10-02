@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_simple_text_input::{TextInputBundle, TextInputValue};
 
-use crate::general::resources::SoundEffects;
+use crate::{general::resources::SoundEffects, GameState};
 
 use super::OnMainMenuScreen;
 
@@ -145,6 +145,7 @@ pub(crate) fn menu_setup(mut commands: Commands) {
 }
 
 pub(crate) fn menu_update(
+    mut game_state: ResMut<NextState<GameState>>,
     mut button_query: Query<
         (&MenuAction, &Interaction, &mut BackgroundColor),
         (Changed<Interaction>, With<Button>),
@@ -159,6 +160,7 @@ pub(crate) fn menu_update(
                 match *action {
                     MenuAction::Host => {
                         println!("Hosting");
+                        game_state.set(GameState::InGame);
                     }
                     MenuAction::Join => {
                         let join_address_element = join_address_query

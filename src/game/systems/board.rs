@@ -7,10 +7,11 @@ use std::f32::consts::PI;
 
 use bevy::prelude::Color;
 
-use crate::{
+use crate::game::{
     board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ClientGameState,
-    PieceModelData, SoundEffects,
+    OnGameScreen, PieceModelData,
 };
+use crate::SoundEffects;
 
 pub(crate) fn spawn_piece(
     commands: &mut Commands,
@@ -59,14 +60,17 @@ pub(crate) fn spawn_piece(
     };
 
     let parent = commands
-        .spawn((SpatialBundle {
-            transform: Transform {
-                translation: position,
-                scale,
-                rotation,
+        .spawn((
+            SpatialBundle {
+                transform: Transform {
+                    translation: position,
+                    scale,
+                    rotation,
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        },))
+            OnGameScreen,
+        ))
         .insert(PickableBundle::default())
         .insert(ChessPiece {
             piece: Piece {
@@ -79,20 +83,26 @@ pub(crate) fn spawn_piece(
 
     for part in parts.iter() {
         let child = commands
-            .spawn((PbrBundle {
-                mesh: part.clone(),
-                material: material.clone(),
-                ..Default::default()
-            },))
-            .insert(OutlineBundle {
-                outline: OutlineVolume {
-                    visible: true,
-                    colour: Color::srgb(0.0, 0.0, 0.0),
-                    width: 2.0,
+            .spawn((
+                PbrBundle {
+                    mesh: part.clone(),
+                    material: material.clone(),
+                    ..Default::default()
                 },
-                mode: OutlineMode::RealVertex,
-                ..Default::default()
-            })
+                OnGameScreen,
+            ))
+            .insert((
+                OutlineBundle {
+                    outline: OutlineVolume {
+                        visible: true,
+                        colour: Color::srgb(0.0, 0.0, 0.0),
+                        width: 2.0,
+                    },
+                    mode: OutlineMode::RealVertex,
+                    ..Default::default()
+                },
+                OnGameScreen,
+            ))
             .insert(ChessPiecePart)
             .id();
 

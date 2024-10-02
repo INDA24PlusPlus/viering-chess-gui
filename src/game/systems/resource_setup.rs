@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use vhultman_chess::Position;
 
-use crate::{ClientGameState, PieceModelData, SquareResourceData};
+use crate::game::{ClientGameState, PieceModelData, SquareResourceData};
 
 pub(crate) fn setup(
     mut commands: Commands,

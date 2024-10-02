@@ -1,6 +1,5 @@
 use bevy::{
     asset::Handle,
-    audio::AudioSource,
     pbr::StandardMaterial,
     prelude::{Mesh, Resource},
 };
