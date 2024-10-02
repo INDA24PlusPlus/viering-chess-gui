@@ -6,6 +6,8 @@ use bevy::{
 use vhultman_chess::ChessMove;
 use vhultman_chess::Position;
 
+use super::networking;
+
 #[derive(Resource)]
 pub struct PieceModelData {
     pub pawn_parts: Vec<Handle<Mesh>>,

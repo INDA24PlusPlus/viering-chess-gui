@@ -25,6 +25,7 @@ pub(crate) fn splash_setup(mut commands: Commands, asset_server: Res<AssetServer
                     align_items: AlignItems::Center,
                     ..default()
                 },
+                background_color: Color::srgb_u8(25, 25, 25).into(),
                 ..default()
             },
             OnSplashScreen,

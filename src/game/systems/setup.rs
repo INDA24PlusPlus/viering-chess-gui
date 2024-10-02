@@ -1,9 +1,15 @@
+use std::{io::Write, time::Duration};
+
 use bevy::prelude::*;
 use bevy_mod_picking::PickableBundle;
+use chess_networking::Start;
 
-use crate::game::{
-    board_id_to_world_pos, ChessSquare, ClientGameState, OnGameScreen, PieceModelData,
-    SquareResourceData,
+use crate::{
+    game::{
+        board_id_to_world_pos, networking::Connection, ChessSquare, ClientGameState, OnGameScreen,
+        PieceModelData, SquareResourceData,
+    },
+    general::resources::{NetworkHandler, NetworkRole},
 };
 
 use super::board;
@@ -14,7 +20,36 @@ pub fn setup_game_scene(
     piece_model_data: Res<PieceModelData>,
     square_resource_data: Res<SquareResourceData>,
     mut game_state: ResMut<ClientGameState>,
+    mut network_handler: ResMut<NetworkHandler>,
 ) {
+    // TODO TEMPORARY MOVE THIS IT IS NOT PART OF SCENE
+    match network_handler.role {
+        NetworkRole::Server => {
+            network_handler.connection = Some(Connection::new_server("127.0.0.1:22022"));
+
+            if let Some(mut connection) = network_handler.connection.take() {
+                println!("{:?}", Start::try_from(&connection.read() as &[u8]));
+            }
+        }
+        NetworkRole::Client => {
+            network_handler.connection = Some(Connection::new_client("127.0.0.1:22022"));
+
+            if let Some(mut connection) = network_handler.connection.take() {
+                let start: Vec<u8> = chess_networking::Start {
+                    is_white: false,
+                    name: Some("Klientmannen".to_string()),
+                    fen: None,
+                    time: None,
+                    inc: None,
+                }
+                .try_into()
+                .unwrap();
+
+                connection.write(start);
+            }
+        }
+    }
+
     // camera
     commands.spawn((
         Camera3dBundle {

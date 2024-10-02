@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_simple_text_input::{TextInputBundle, TextInputValue};
 
-use crate::{general::resources::SoundEffects, GameState};
+use crate::{
+    general::resources::{NetworkHandler, NetworkRole, SoundEffects},
+    GameState,
+};
 
 use super::OnMainMenuScreen;
 
@@ -153,6 +156,7 @@ pub(crate) fn menu_update(
     join_address_query: Query<&TextInputValue>,
     mut commands: Commands,
     sound_effects: Res<SoundEffects>,
+    mut network_handler: ResMut<NetworkHandler>,
 ) {
     for (action, interaction, mut background_color) in &mut button_query {
         match *interaction {
@@ -161,6 +165,7 @@ pub(crate) fn menu_update(
                     MenuAction::Host => {
                         println!("Hosting");
                         game_state.set(GameState::InGame);
+                        network_handler.role = NetworkRole::Server;
                     }
                     MenuAction::Join => {
                         let join_address_element = join_address_query
@@ -169,6 +174,8 @@ pub(crate) fn menu_update(
                             .expect("No join address element");
 
                         println!("Joining {}", join_address_element.0);
+                        game_state.set(GameState::InGame);
+                        network_handler.role = NetworkRole::Client;
                     }
                 }
 

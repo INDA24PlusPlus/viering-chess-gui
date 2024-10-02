@@ -4,6 +4,8 @@ use components::*;
 pub mod resources;
 use resources::*;
 
+pub mod networking;
+
 mod systems;
 use systems::{board, input, resource_setup, setup};
 
