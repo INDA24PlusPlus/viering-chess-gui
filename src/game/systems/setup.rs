@@ -1,13 +1,14 @@
 use std::{io::Write, time::Duration};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, reflect::List};
 use bevy_mod_picking::PickableBundle;
 use chess_networking::Start;
+use vhultman_chess::Position;
 
 use crate::{
     game::{
-        board_id_to_world_pos, networking::Connection, ChessSquare, ClientGameState, OnGameScreen,
-        PieceModelData, SquareResourceData,
+        board_id_to_world_pos, networking::Connection, to_fen_extended, ChessSquare,
+        ClientGameState, OnGameScreen, PieceModelData, SquareResourceData,
     },
     general::resources::{NetworkHandler, NetworkRole},
 };
@@ -28,7 +29,25 @@ pub fn setup_game_scene(
             network_handler.connection = Some(Connection::new_server("127.0.0.1:22022"));
 
             if let Some(mut connection) = network_handler.connection.take() {
-                println!("{:?}", Start::try_from(&connection.read() as &[u8]));
+                let packet = chess_networking::Start::try_from(&connection.read() as &[u8])
+                    .expect("Bad packet");
+
+                println!(
+                    "Client with name {} connected",
+                    packet.name.unwrap_or("client".to_string())
+                );
+
+                let response_packet: Vec<u8> = chess_networking::Start {
+                    is_white: true,
+                    name: Some("Servermannen".to_string()),
+                    fen: Some(to_fen_extended(&game_state.board_state)),
+                    time: None,
+                    inc: None,
+                }
+                .try_into()
+                .unwrap();
+
+                connection.write(response_packet);
             }
         }
         NetworkRole::Client => {
@@ -46,6 +65,24 @@ pub fn setup_game_scene(
                 .unwrap();
 
                 connection.write(start);
+
+                // await start packet from server
+                let buf: Vec<u8>;
+                loop {
+                    let new_buf = connection.read();
+                    if !new_buf.is_empty() {
+                        buf = new_buf;
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+
+                let packet = chess_networking::Start::try_from(&buf as &[u8]).expect("Bad packet");
+
+                println!(
+                    "Server sent start packet: {}",
+                    packet.fen.unwrap_or("no fen?".to_string())
+                );
             }
         }
     }
