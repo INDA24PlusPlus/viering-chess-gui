@@ -26,6 +26,13 @@ pub struct SquareResourceData {
     pub selected_square: Handle<StandardMaterial>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum NetworkState {
+    Normal,
+    AwaitingMove,
+    AwaitingAck,
+}
+
 #[derive(Resource)]
 pub struct ClientGameState {
     pub board_state: Position,
@@ -35,4 +42,5 @@ pub struct ClientGameState {
     pub last_move: Option<ChessMove>,
     pub pending_promotion_move: Option<ChessMove>,
     pub own_color: PieceColor,
+    pub network_state: NetworkState,
 }

@@ -5,6 +5,7 @@ use bevy_mod_picking::PickableBundle;
 use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
 
+use crate::game::NetworkState;
 use crate::{
     game::{
         board_id_to_world_pos, networking::Connection, ChessSquare, ClientGameState, OnGameScreen,
@@ -62,18 +63,21 @@ pub fn setup_game_scene(
                     } else {
                         PieceColor::Black
                     },
+                    network_state: NetworkState::Normal,
                 };
 
                 connection.write(response_packet_bytes);
             }
         }
         NetworkRole::Client => {
-            network_handler.connection = Some(Connection::new_client(
-                match &network_handler.address_to_join {
-                    Some(addr) => &addr,
-                    None => "127.0.0.1:22022",
-                },
-            ));
+            let mut address = "127.0.0.1:22022";
+            if let Some(addr) = &network_handler.address_to_join {
+                if !addr.is_empty() {
+                    address = addr;
+                }
+            }
+
+            network_handler.connection = Some(Connection::new_client(address));
 
             if let Some(connection) = network_handler.connection.as_mut() {
                 let start: Vec<u8> = chess_networking::Start {
@@ -115,10 +119,17 @@ pub fn setup_game_scene(
                     } else {
                         PieceColor::White
                     },
+                    network_state: NetworkState::Normal,
                 };
             }
         }
     }
+
+    game_state.network_state = if game_state.board_state.current_side() == game_state.own_color {
+        NetworkState::Normal
+    } else {
+        NetworkState::AwaitingMove
+    };
 
     // camera
     commands.spawn((

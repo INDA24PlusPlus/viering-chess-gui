@@ -6,7 +6,7 @@ use events::{Click, Pointer};
 use vhultman_chess::PieceType;
 
 use crate::game::{
-    world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare, ClientGameState,
+    world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare, ClientGameState, NetworkState,
     SquareResourceData,
 };
 use crate::general::resources::NetworkHandler;
@@ -24,6 +24,10 @@ pub fn handle_picking(
     sound_effects: Res<SoundEffects>,
     mut network_handler: ResMut<NetworkHandler>,
 ) {
+    if game_state.network_state != NetworkState::Normal {
+        return;
+    }
+
     let mut square = None;
     // Handle selection and deselection
     for ev in events.read() {
@@ -109,6 +113,7 @@ pub fn handle_picking(
                             } else {
                                 game_state.pending_promotion_move = None;
                                 game_state.board_state.make_move(m);
+                                game_state.network_state = NetworkState::AwaitingAck;
 
                                 let move_buf: Vec<u8> = chess_networking::Move {
                                     from: (m.from() as u8 % 8, 7 - (m.from() as u8 / 8)),

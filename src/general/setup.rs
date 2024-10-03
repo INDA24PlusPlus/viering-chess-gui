@@ -15,5 +15,6 @@ pub(crate) fn setup_resources(mut commands: Commands, asset_server: Res<AssetSer
     commands.insert_resource(NetworkHandler {
         connection: None,
         role: NetworkRole::Client,
+        address_to_join: None,
     });
 }
