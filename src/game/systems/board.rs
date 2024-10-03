@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_mod_outline::{OutlineBundle, OutlineMode, OutlineVolume};
 use bevy_mod_picking::PickableBundle;
+use chess_networking::PromotionPiece;
 use vhultman_chess::{Color as PieceColor, Piece, PieceType};
 
 use std::f32::consts::PI;
@@ -246,11 +247,20 @@ pub(crate) fn wait_for_move(
                 .collect();
 
             if possible_moves.contains(&to_id) {
-                let possible_move = game_state.board_state.get_move(from_id, to_id);
+                let mut possible_move = game_state.board_state.get_move(from_id, to_id);
 
-                if let Some(m) = possible_move {
-                    game_state.board_state.make_move(m);
-                    game_state.last_move = Some(m);
+                if let Some(m) = possible_move.as_mut() {
+                    if let Some(promotion_piece) = packet.promotion {
+                        m.set_promotion_piece(match promotion_piece {
+                            PromotionPiece::Rook => PieceType::Rook,
+                            PromotionPiece::Knight => PieceType::Knight,
+                            PromotionPiece::Bishop => PieceType::Bishop,
+                            PromotionPiece::Queen => PieceType::Queen,
+                        });
+                    }
+
+                    game_state.board_state.make_move(*m);
+                    game_state.last_move = Some(*m);
                     game_state.board_dirty = true;
                 }
             }
@@ -269,11 +279,20 @@ pub(crate) fn wait_for_move(
                 .collect();
 
             if possible_moves.contains(&to_id) {
-                let possible_move = game_state.board_state.get_move(from_id, to_id);
+                let mut possible_move = game_state.board_state.get_move(from_id, to_id);
 
-                if let Some(m) = possible_move {
-                    game_state.board_state.make_move(m);
-                    game_state.last_move = Some(m);
+                if let Some(m) = possible_move.as_mut() {
+                    if let Some(promotion_piece) = packet.promotion {
+                        m.set_promotion_piece(match promotion_piece {
+                            PromotionPiece::Rook => PieceType::Rook,
+                            PromotionPiece::Knight => PieceType::Knight,
+                            PromotionPiece::Bishop => PieceType::Bishop,
+                            PromotionPiece::Queen => PieceType::Queen,
+                        });
+                    }
+
+                    game_state.board_state.make_move(*m);
+                    game_state.last_move = Some(*m);
                     game_state.board_dirty = true;
                 }
             }

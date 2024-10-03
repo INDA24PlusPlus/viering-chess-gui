@@ -1,7 +1,8 @@
 use bevy::prelude::*;
+use chess_networking::PromotionPiece;
 use vhultman_chess::{Color as PieceColor, GameState, PieceType};
 
-use crate::game::ClientGameState;
+use crate::{game::ClientGameState, general::resources::NetworkHandler};
 
 #[derive(Component)]
 pub struct TurnText;
@@ -303,6 +304,7 @@ pub fn update_ui(
 pub(crate) fn promotion_menu_action(
     menu_action_query: Query<(&PromotionMenuAction, &Interaction), With<Button>>,
     mut game_state: ResMut<ClientGameState>,
+    mut network_handler: ResMut<NetworkHandler>,
 ) {
     for (action, interaction) in &menu_action_query {
         // Click on one of the promotion piece buttons
@@ -318,6 +320,24 @@ pub(crate) fn promotion_menu_action(
                 game_state.last_move = Some(m);
                 game_state.board_dirty = true;
                 game_state.pending_promotion_move = None;
+
+                let move_packet = chess_networking::Move {
+                    from: (m.from() as u8 % 8, 7 - (m.from() as u8 / 8)),
+                    to: (m.to() as u8 % 8, 7 - (m.to() as u8 / 8)),
+                    promotion: match m.promotion_piece() {
+                        PieceType::Knight => Some(PromotionPiece::Knight),
+                        PieceType::Bishop => Some(PromotionPiece::Bishop),
+                        PieceType::Rook => Some(PromotionPiece::Rook),
+                        PieceType::Queen => Some(PromotionPiece::Queen),
+                        _ => None,
+                    },
+                    forfeit: false,
+                    offer_draw: false,
+                };
+
+                if let Some(connection) = network_handler.connection.as_mut() {
+                    connection.write(move_packet.try_into().unwrap());
+                }
             }
         }
     }
