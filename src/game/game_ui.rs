@@ -15,6 +15,9 @@ pub struct GameStatePopupWindow;
 #[derive(Component)]
 pub struct PromotionPopupWindow;
 
+#[derive(Component)]
+pub struct WaitingForOpponentWindow;
+
 #[derive(Component, Clone, Copy, Debug)]
 pub enum PromotionMenuAction {
     Knight,
@@ -31,16 +34,16 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 margin: UiRect {
                     left: Val::Px(12.0),
                     top: Val::Px(12.0),
-                    ..Default::default()
+                    ..default()
                 },
                 flex_direction: FlexDirection::Column,
                 display: Display::Flex,
                 row_gap: Val::Px(6.0),
-                ..Default::default()
+                ..default()
             },
             border_radius: BorderRadius::all(Val::Px(6.0)),
             background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
-            ..Default::default()
+            ..default()
         })
         .with_children(|parent| {
             parent.spawn((
@@ -66,10 +69,10 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
-                    ..Default::default()
+                    ..default()
                 },
                 border_radius: BorderRadius::all(Val::Px(6.0)),
-                ..Default::default()
+                ..default()
             },
             GameStatePopupWindow,
         ))
@@ -81,11 +84,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         flex_direction: FlexDirection::Column,
                         display: Display::Flex,
                         row_gap: Val::Px(6.0),
-                        ..Default::default()
+                        ..default()
                     },
                     border_radius: BorderRadius::all(Val::Px(6.0)),
                     background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
-                    ..Default::default()
+                    ..default()
                 })
                 .with_children(|parent| {
                     parent.spawn((
@@ -102,6 +105,48 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
         });
 
+    // waiting window
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Vw(100.0),
+                    height: Val::Vh(100.0),
+                    display: Display::None,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                ..default()
+            },
+            WaitingForOpponentWindow,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        display: Display::Flex,
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::all(Val::Px(12.0)),
+                        ..default()
+                    },
+                    border_radius: BorderRadius::all(Val::Px(6.0)),
+                    background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Waiting for opponent...",
+                        TextStyle {
+                            font_size: 24.0,
+                            color: Color::srgb_u8(0, 0, 0),
+                            ..default()
+                        },
+                    ));
+                });
+        });
+
     // promotion window
     commands
         .spawn((
@@ -113,9 +158,9 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     display: Display::None,
-                    ..Default::default()
+                    ..default()
                 },
-                ..Default::default()
+                ..default()
             },
             PromotionPopupWindow,
         ))
@@ -195,6 +240,7 @@ pub fn update_ui(
         &mut Style,
         Option<&GameStatePopupWindow>,
         Option<&PromotionPopupWindow>,
+        Option<&WaitingForOpponentWindow>,
     )>,
     mut game_state: ResMut<ClientGameState>,
 ) {
@@ -227,7 +273,7 @@ pub fn update_ui(
         }
     }
 
-    for (mut style, game_state_wnd, promotion_wnd) in windows_query.iter_mut() {
+    for (mut style, game_state_wnd, promotion_wnd, opponent_wnd) in windows_query.iter_mut() {
         if game_state_wnd.is_some() {
             // popup window logic
             style.display = match game_state.board_state.check_game_state() {
@@ -238,6 +284,14 @@ pub fn update_ui(
 
         if promotion_wnd.is_some() {
             if game_state.pending_promotion_move.is_some() {
+                style.display = Display::Flex;
+            } else {
+                style.display = Display::None;
+            }
+        }
+
+        if opponent_wnd.is_some() {
+            if game_state.board_state.current_side() != game_state.own_color {
                 style.display = Display::Flex;
             } else {
                 style.display = Display::None;

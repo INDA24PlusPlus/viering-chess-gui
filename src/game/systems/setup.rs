@@ -73,7 +73,6 @@ pub fn setup_game_scene(
             network_handler.connection = Some(Connection::new_client("127.0.0.1:22022"));
 
             if let Some(connection) = network_handler.connection.as_mut() {
-                println!("at least there is a connection...");
                 let start: Vec<u8> = chess_networking::Start {
                     is_white: false,
                     name: Some("Klientmannen".to_string()),
@@ -90,9 +89,7 @@ pub fn setup_game_scene(
                 std::thread::sleep(Duration::from_secs(2));
                 let buf: Vec<u8>;
                 loop {
-                    println!("waiting...");
                     let new_buf = connection.read();
-                    println!("done waiting...");
                     if !new_buf.is_empty() {
                         buf = new_buf;
                         break;
@@ -101,7 +98,6 @@ pub fn setup_game_scene(
                 }
 
                 let packet = chess_networking::Start::try_from(&buf as &[u8]).expect("Bad packet");
-                println!("{:?}", packet);
 
                 *game_state = ClientGameState {
                     board_state: Position::from_fen(packet.fen.unwrap().as_str())
