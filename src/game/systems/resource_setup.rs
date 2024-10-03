@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
 
 use crate::game::{ClientGameState, PieceModelData, SquareResourceData};
@@ -63,5 +64,6 @@ pub(crate) fn setup(
         board_dirty: true,
         last_move: None,
         pending_promotion_move: None,
+        own_color: PieceColor::White,
     });
 }

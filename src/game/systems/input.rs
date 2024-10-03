@@ -9,6 +9,7 @@ use crate::game::{
     world_pos_to_board_id, ChessPiece, ChessPiecePart, ChessSquare, ClientGameState,
     SquareResourceData,
 };
+use crate::general::resources::NetworkHandler;
 use crate::SoundEffects;
 
 #[allow(clippy::too_many_arguments)]
@@ -21,6 +22,7 @@ pub fn handle_picking(
     mut game_state: ResMut<ClientGameState>,
     square_resource_data: Res<SquareResourceData>,
     sound_effects: Res<SoundEffects>,
+    mut network_handler: ResMut<NetworkHandler>,
 ) {
     let mut square = None;
     // Handle selection and deselection
@@ -32,7 +34,9 @@ pub fn handle_picking(
 
             // set selected piece
             if let Ok((_, transform, chess_piece, _)) = piece_query.get_mut(parent_entity.id()) {
-                if chess_piece.piece.color != game_state.board_state.current_side() {
+                if chess_piece.piece.color != game_state.board_state.current_side()
+                    && chess_piece.piece.color != game_state.own_color
+                {
                     square = Some(world_pos_to_board_id(transform.translation));
                     might_move_piece = true;
 
@@ -44,12 +48,17 @@ pub fn handle_picking(
                     }
                 } else if game_state.selected_piece == Some(chess_piece.id) {
                     game_state.selected_piece = None;
-                } else {
+                } else if chess_piece.piece.color == game_state.own_color {
                     commands.spawn(AudioBundle {
                         source: sound_effects.select.clone(),
                         ..default()
                     });
                     game_state.selected_piece = Some(chess_piece.id);
+                } else {
+                    commands.spawn(AudioBundle {
+                        source: sound_effects.illegal_move.clone(),
+                        ..default()
+                    });
                 }
             }
         } else {
@@ -96,21 +105,25 @@ pub fn handle_picking(
                             // Why tf do i need to know promotion type before making the move :sob:
                             if m.is_promotion() {
                                 m.set_promotion_piece(PieceType::Queen);
-
                                 game_state.pending_promotion_move = Some(m);
-
-                                //spawn_piece(
-                                //    &mut commands,
-                                //    &piece_model_data,
-                                //    m.promotion_piece(),
-                                //    game_state.board_state.current_side(),
-                                //    board_id_to_world_pos(square),
-                                //    &mut game_state,
-                                //);
                             } else {
                                 game_state.pending_promotion_move = None;
-
                                 game_state.board_state.make_move(m);
+
+                                let move_buf: Vec<u8> = chess_networking::Move {
+                                    from: (m.from() as u8 % 8, 7 - (m.from() as u8 / 8)),
+                                    to: (m.to() as u8 % 8, 7 - (m.to() as u8 / 8)),
+                                    promotion: None,
+                                    forfeit: false,
+                                    offer_draw: false,
+                                }
+                                .try_into()
+                                .unwrap();
+
+                                if let Some(connection) = network_handler.connection.as_mut() {
+                                    connection.write(move_buf);
+                                }
+
                                 game_state.last_move = Some(m);
                                 game_state.board_dirty = true;
                             }

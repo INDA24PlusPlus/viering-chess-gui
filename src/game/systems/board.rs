@@ -11,6 +11,7 @@ use crate::game::{
     board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ClientGameState,
     OnGameScreen, PieceModelData,
 };
+use crate::general::resources::{NetworkHandler, NetworkRole};
 use crate::SoundEffects;
 
 pub(crate) fn spawn_piece(
@@ -211,4 +212,75 @@ pub(crate) fn update_board(
             }
         }
     }
+}
+
+pub(crate) fn wait_for_move(
+    mut game_state: ResMut<ClientGameState>,
+    mut network_handler: ResMut<NetworkHandler>,
+) {
+    if game_state.board_state.current_side() == game_state.own_color {
+        return;
+    }
+
+    if let Some(connection) = network_handler.connection.as_mut() {
+        // wait for start packet from server
+        let buf: Vec<u8> = connection.read();
+        if buf.is_empty() {
+            return;
+        }
+
+        let packet = chess_networking::Move::try_from(&buf as &[u8]).expect("Bad packet");
+
+        if network_handler.role == NetworkRole::Client {
+            // TODO WE ARE CURRENTLY NOT SENDING ACK PACKET, AND JUST ASSUME THE MOVE IS LEGAL. IF
+            // IT IS NOT THE CLIENT AND SERVER WILL BE OUT OF SYNC
+
+            let from_id = square_coords_to_id(packet.from);
+            let to_id = square_coords_to_id(packet.to);
+
+            let possible_moves: Vec<u32> = game_state
+                .board_state
+                .moves_for_square(from_id)
+                .iter()
+                .map(|m| m.to())
+                .collect();
+
+            if possible_moves.contains(&to_id) {
+                let possible_move = game_state.board_state.get_move(from_id, to_id);
+
+                if let Some(m) = possible_move {
+                    game_state.board_state.make_move(m);
+                    game_state.last_move = Some(m);
+                    game_state.board_dirty = true;
+                }
+            }
+        } else {
+            // TODO WE ARE CURRENTLY NOT SENDING ACK PACKET, AND JUST ASSUME THE MOVE IS LEGAL. IF
+            // IT IS NOT THE CLIENT AND SERVER WILL BE OUT OF SYNC
+
+            let from_id = square_coords_to_id(packet.from);
+            let to_id = square_coords_to_id(packet.to);
+
+            let possible_moves: Vec<u32> = game_state
+                .board_state
+                .moves_for_square(from_id)
+                .iter()
+                .map(|m| m.to())
+                .collect();
+
+            if possible_moves.contains(&to_id) {
+                let possible_move = game_state.board_state.get_move(from_id, to_id);
+
+                if let Some(m) = possible_move {
+                    game_state.board_state.make_move(m);
+                    game_state.last_move = Some(m);
+                    game_state.board_dirty = true;
+                }
+            }
+        }
+    }
+}
+
+fn square_coords_to_id(coords: (u8, u8)) -> u32 {
+    ((7 - coords.1) * 8 + coords.0).into()
 }

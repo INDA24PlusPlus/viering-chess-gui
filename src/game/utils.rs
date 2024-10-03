@@ -47,10 +47,11 @@ pub fn from_fen_extended(fen: &str) -> ClientGameState {
         board_dirty: true,
         last_move: None,
         pending_promotion_move: None,
+        own_color: PieceColor::White,
     }
 }
 
-pub fn to_fen_extended(position: &Position) -> String {
+pub fn to_fen(position: &Position) -> String {
     let mut segment_1 = String::new();
 
     for y in 0..8 {

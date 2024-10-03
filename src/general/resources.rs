@@ -12,6 +12,7 @@ pub struct SoundEffects {
     pub splash: Handle<AudioSource>,
 }
 
+#[derive(PartialEq)]
 pub enum NetworkRole {
     Server,
     Client,

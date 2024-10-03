@@ -31,7 +31,7 @@ impl Connection {
                     std::thread::sleep(Duration::from_secs(1));
                 }
                 Err(e) => {
-                    panic!("Error: {}", e);
+                    panic!("Error in Connection::new_server(): {}", e);
                 }
             }
         }
@@ -48,12 +48,12 @@ impl Connection {
     }
 
     pub fn read(&mut self) -> Vec<u8> {
-        let mut buf = [0u8; 512];
+        let mut buf = [0u8; 2048];
 
         match self.stream.read(&mut buf) {
             Ok(len) => buf[0..len].to_vec(),
             Err(err) => {
-                println!("Error: {}", err);
+                //println!("Error in Connection::read(): {}", err);
                 Vec::new()
             }
         }

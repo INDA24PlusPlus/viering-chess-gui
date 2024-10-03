@@ -4,9 +4,8 @@ use bevy::{
     prelude::{Mesh, Resource},
 };
 use vhultman_chess::ChessMove;
+use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
-
-use super::networking;
 
 #[derive(Resource)]
 pub struct PieceModelData {
@@ -35,4 +34,5 @@ pub struct ClientGameState {
     pub board_dirty: bool,
     pub last_move: Option<ChessMove>,
     pub pending_promotion_move: Option<ChessMove>,
+    pub own_color: PieceColor,
 }

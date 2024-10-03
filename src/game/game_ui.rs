@@ -202,8 +202,12 @@ pub fn update_ui(
         // Update turn text
         if turn_text.is_some() {
             text.sections[0].value = format!(
-                "{}'s turn",
+                "{}'s turn (we are {})",
                 match game_state.board_state.current_side() {
+                    PieceColor::White => "White",
+                    PieceColor::Black => "Black",
+                },
+                match game_state.own_color {
                     PieceColor::White => "White",
                     PieceColor::Black => "Black",
                 }

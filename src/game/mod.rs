@@ -37,6 +37,7 @@ pub fn game_plugin(app: &mut App) {
             game_ui::update_ui.run_if(in_state(GameState::InGame)),
             game_ui::promotion_menu_action.run_if(in_state(GameState::InGame)),
             board::update_board.run_if(in_state(GameState::InGame)),
+            board::wait_for_move.run_if(in_state(GameState::InGame)),
         ),
     )
     .insert_resource(ClearColor(Color::srgb_u8(77, 79, 84)))

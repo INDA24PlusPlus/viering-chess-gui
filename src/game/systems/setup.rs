@@ -3,12 +3,13 @@ use std::{io::Write, time::Duration};
 use bevy::{prelude::*, reflect::List};
 use bevy_mod_picking::PickableBundle;
 use chess_networking::Start;
+use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
 
 use crate::{
     game::{
-        board_id_to_world_pos, networking::Connection, to_fen_extended, ChessSquare,
-        ClientGameState, OnGameScreen, PieceModelData, SquareResourceData,
+        board_id_to_world_pos, networking::Connection, ChessSquare, ClientGameState, OnGameScreen,
+        PieceModelData, SquareResourceData,
     },
     general::resources::{NetworkHandler, NetworkRole},
 };
@@ -28,7 +29,7 @@ pub fn setup_game_scene(
         NetworkRole::Server => {
             network_handler.connection = Some(Connection::new_server("127.0.0.1:22022"));
 
-            if let Some(mut connection) = network_handler.connection.take() {
+            if let Some(connection) = network_handler.connection.as_mut() {
                 let packet = chess_networking::Start::try_from(&connection.read() as &[u8])
                     .expect("Bad packet");
 
@@ -37,23 +38,42 @@ pub fn setup_game_scene(
                     packet.name.unwrap_or("client".to_string())
                 );
 
-                let response_packet: Vec<u8> = chess_networking::Start {
+                let response_packet = chess_networking::Start {
                     is_white: true,
                     name: Some("Servermannen".to_string()),
-                    fen: Some(to_fen_extended(&game_state.board_state)),
+                    fen: Some(
+                        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string(),
+                    ),
                     time: None,
                     inc: None,
-                }
-                .try_into()
-                .unwrap();
+                };
 
-                connection.write(response_packet);
+                let response_packet_bytes: Vec<u8> = response_packet.clone().try_into().unwrap();
+
+                *game_state = ClientGameState {
+                    board_state: Position::from_fen(response_packet.fen.unwrap().as_str())
+                        .expect("Failed to parse initial server fen string"),
+                    board_dirty: true,
+                    last_move: None,
+                    pending_promotion_move: None,
+                    selected_piece: None,
+                    spawned_pieces: 0,
+                    own_color: if response_packet.is_white {
+                        PieceColor::White
+                    } else {
+                        PieceColor::Black
+                    },
+                };
+
+                connection.write(response_packet_bytes);
             }
         }
         NetworkRole::Client => {
+            // TODO take address from join field
             network_handler.connection = Some(Connection::new_client("127.0.0.1:22022"));
 
-            if let Some(mut connection) = network_handler.connection.take() {
+            if let Some(connection) = network_handler.connection.as_mut() {
+                println!("at least there is a connection...");
                 let start: Vec<u8> = chess_networking::Start {
                     is_white: false,
                     name: Some("Klientmannen".to_string()),
@@ -66,10 +86,13 @@ pub fn setup_game_scene(
 
                 connection.write(start);
 
-                // await start packet from server
+                // wait for start packet from server
+                std::thread::sleep(Duration::from_secs(2));
                 let buf: Vec<u8>;
                 loop {
+                    println!("waiting...");
                     let new_buf = connection.read();
+                    println!("done waiting...");
                     if !new_buf.is_empty() {
                         buf = new_buf;
                         break;
@@ -78,11 +101,22 @@ pub fn setup_game_scene(
                 }
 
                 let packet = chess_networking::Start::try_from(&buf as &[u8]).expect("Bad packet");
+                println!("{:?}", packet);
 
-                println!(
-                    "Server sent start packet: {}",
-                    packet.fen.unwrap_or("no fen?".to_string())
-                );
+                *game_state = ClientGameState {
+                    board_state: Position::from_fen(packet.fen.unwrap().as_str())
+                        .expect("Failed to parse initial server fen string"),
+                    board_dirty: true,
+                    last_move: None,
+                    pending_promotion_move: None,
+                    selected_piece: None,
+                    spawned_pieces: 0,
+                    own_color: if packet.is_white {
+                        PieceColor::Black
+                    } else {
+                        PieceColor::White
+                    },
+                };
             }
         }
     }
