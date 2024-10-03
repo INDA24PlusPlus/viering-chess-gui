@@ -108,8 +108,13 @@ pub fn setup_game_scene(
                 let packet = chess_networking::Start::try_from(&buf as &[u8]).expect("Bad packet");
 
                 *game_state = ClientGameState {
-                    board_state: Position::from_fen(packet.fen.unwrap().as_str())
-                        .expect("Failed to parse initial server fen string"),
+                    board_state: Position::from_fen(
+                        packet
+                            .fen
+                            .unwrap_or("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".to_string())
+                            .as_str(),
+                    )
+                    .expect("Failed to parse initial server fen string"),
                     board_dirty: true,
                     last_move: None,
                     pending_promotion_move: None,

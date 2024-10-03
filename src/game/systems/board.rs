@@ -12,7 +12,7 @@ use crate::game::{
     board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ClientGameState,
     NetworkState, OnGameScreen, PieceModelData,
 };
-use crate::general::resources::{NetworkHandler, NetworkRole};
+use crate::general::resources::NetworkHandler;
 use crate::SoundEffects;
 
 pub(crate) fn spawn_piece(

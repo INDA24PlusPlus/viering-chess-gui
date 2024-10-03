@@ -303,7 +303,11 @@ pub fn update_ui(
 
         if opponent_wnd.is_some() {
             if game_state.board_state.current_side() != game_state.own_color
-                && game_state.board_state.check_game_state() == GameState::Playing
+                && match game_state.board_state.check_game_state() {
+                    // why no partialeq wtf :sob: :sob: :sob:
+                    GameState::Playing => true,
+                    _ => false,
+                }
             {
                 style.display = Display::Flex;
             } else {
