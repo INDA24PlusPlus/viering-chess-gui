@@ -68,8 +68,12 @@ pub fn setup_game_scene(
             }
         }
         NetworkRole::Client => {
-            // TODO take address from join field
-            network_handler.connection = Some(Connection::new_client("127.0.0.1:22022"));
+            network_handler.connection = Some(Connection::new_client(
+                match &network_handler.address_to_join {
+                    Some(addr) => &addr,
+                    None => "127.0.0.1:22022",
+                },
+            ));
 
             if let Some(connection) = network_handler.connection.as_mut() {
                 let start: Vec<u8> = chess_networking::Start {

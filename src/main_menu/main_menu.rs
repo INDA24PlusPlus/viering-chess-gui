@@ -176,6 +176,7 @@ pub(crate) fn menu_update(
                         println!("Joining {}", join_address_element.0);
                         game_state.set(GameState::InGame);
                         network_handler.role = NetworkRole::Client;
+                        network_handler.address_to_join = Some(join_address_element.0.clone());
                     }
                 }
 

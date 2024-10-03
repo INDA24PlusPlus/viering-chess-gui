@@ -22,4 +22,5 @@ pub enum NetworkRole {
 pub struct NetworkHandler {
     pub connection: Option<Connection>,
     pub role: NetworkRole,
+    pub address_to_join: Option<String>,
 }
