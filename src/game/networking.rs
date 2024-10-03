@@ -52,10 +52,7 @@ impl Connection {
 
         match self.stream.read(&mut buf) {
             Ok(len) => buf[0..len].to_vec(),
-            Err(err) => {
-                //println!("Error in Connection::read(): {}", err);
-                Vec::new()
-            }
+            Err(_) => Vec::new(),
         }
     }
 

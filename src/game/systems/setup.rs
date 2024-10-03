@@ -1,8 +1,7 @@
-use std::{io::Write, time::Duration};
+use std::time::Duration;
 
-use bevy::{prelude::*, reflect::List};
+use bevy::prelude::*;
 use bevy_mod_picking::PickableBundle;
-use chess_networking::Start;
 use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
 
