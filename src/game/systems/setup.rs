@@ -64,6 +64,7 @@ pub fn setup_game_scene(
                         PieceColor::Black
                     },
                     network_state: NetworkState::Normal,
+                    next_ack_state: None,
                 };
 
                 connection.write(response_packet_bytes);
@@ -120,6 +121,7 @@ pub fn setup_game_scene(
                         PieceColor::White
                     },
                     network_state: NetworkState::Normal,
+                    next_ack_state: None,
                 };
             }
         }

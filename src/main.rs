@@ -11,6 +11,9 @@ use general::resources::SoundEffects;
 mod main_menu;
 mod splash;
 
+// warning code is a mess, first time using bevy so everything is a mess, also networking lib and
+// my gui game structure didn't work too well together meaning even more spaghetti :D
+
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, States, Default)]
 enum GameState {
     #[default]

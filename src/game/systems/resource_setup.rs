@@ -67,5 +67,6 @@ pub(crate) fn setup(
         pending_promotion_move: None,
         own_color: PieceColor::White,
         network_state: NetworkState::Normal,
+        next_ack_state: None,
     });
 }

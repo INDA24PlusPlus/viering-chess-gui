@@ -43,4 +43,5 @@ pub struct ClientGameState {
     pub pending_promotion_move: Option<ChessMove>,
     pub own_color: PieceColor,
     pub network_state: NetworkState,
+    pub next_ack_state: Option<chess_networking::GameState>,
 }

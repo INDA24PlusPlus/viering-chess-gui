@@ -4,6 +4,8 @@ use vhultman_chess::{Color as PieceColor, GameState, PieceType};
 
 use crate::{game::ClientGameState, general::resources::NetworkHandler};
 
+use super::NetworkState;
+
 #[derive(Component)]
 pub struct TurnText;
 
@@ -263,14 +265,22 @@ pub fn update_ui(
 
         // Update game state text
         if game_state_text.is_some() {
-            text.sections[0].value = match game_state.board_state.check_game_state() {
-                GameState::Playing => "",
-                GameState::Checkmate => "Checkmate",
-                GameState::Stalemate => "Stalemate",
-                GameState::DrawByRepetition => "Draw",
-                GameState::DrawByInsufficientMaterial => "Draw",
+            if let Some(next_ack_state) = &game_state.next_ack_state {
+                text.sections[0].value = match next_ack_state {
+                    chess_networking::GameState::CheckMate => "Checkmate",
+                    chess_networking::GameState::Draw => "Draw",
+                }
+                .to_string();
+            } else {
+                text.sections[0].value = match game_state.board_state.check_game_state() {
+                    GameState::Playing => "",
+                    GameState::Checkmate => "Checkmate",
+                    GameState::Stalemate => "Stalemate",
+                    GameState::DrawByRepetition => "Draw",
+                    GameState::DrawByInsufficientMaterial => "Draw",
+                }
+                .to_string();
             }
-            .to_string();
         }
     }
 
@@ -292,7 +302,9 @@ pub fn update_ui(
         }
 
         if opponent_wnd.is_some() {
-            if game_state.board_state.current_side() != game_state.own_color {
+            if game_state.board_state.current_side() != game_state.own_color
+                && game_state.board_state.check_game_state() == GameState::Playing
+            {
                 style.display = Display::Flex;
             } else {
                 style.display = Display::None;
@@ -317,6 +329,7 @@ pub(crate) fn promotion_menu_action(
                     PromotionMenuAction::Queen => PieceType::Queen,
                 });
                 game_state.board_state.make_move(m);
+                game_state.network_state = NetworkState::AwaitingAck;
                 game_state.last_move = Some(m);
                 game_state.board_dirty = true;
                 game_state.pending_promotion_move = None;

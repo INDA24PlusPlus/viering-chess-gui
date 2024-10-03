@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_mod_outline::{OutlineBundle, OutlineMode, OutlineVolume};
 use bevy_mod_picking::PickableBundle;
 use chess_networking::PromotionPiece;
-use vhultman_chess::{Color as PieceColor, Piece, PieceType};
+use vhultman_chess::{Color as PieceColor, GameState, Piece, PieceType};
 
 use std::f32::consts::PI;
 
@@ -219,11 +219,13 @@ pub(crate) fn wait_for_move(
     mut game_state: ResMut<ClientGameState>,
     mut network_handler: ResMut<NetworkHandler>,
 ) {
+    println!("{:?}", game_state.network_state);
+
     if game_state.network_state == NetworkState::Normal {
         return;
     }
 
-    let role = network_handler.role;
+    //let role = network_handler.role;
     if let Some(connection) = network_handler.connection.as_mut() {
         // wait for start packet from server
         let buf: Vec<u8> = connection.read();
@@ -234,16 +236,24 @@ pub(crate) fn wait_for_move(
         if game_state.network_state == NetworkState::AwaitingAck {
             let packet = chess_networking::Ack::try_from(&buf as &[u8]).expect("Bad packet");
 
+            game_state.next_ack_state = packet.end_state;
+
             if packet.ok {
                 game_state.network_state = NetworkState::AwaitingMove;
                 println!("received ack packet, its ok! time to make a move for us!");
             } else {
-                todo!();
-                if role == NetworkRole::Server {
-                    // we just won, time to send out end state
-                } else {
-                    // we just lost, time to resign
-                }
+                // an illegal move is supposed to make the server win (no matter who doesn't accept
+                // the move), but endstate in the networking specs doesn't support setting who
+                // checkmated who so im just setting checmkate for now no matter what in next ack packet
+                // thus logic below is commented out
+
+                //if role == NetworkRole::Server {
+                //    // we just won, time to send out end state
+                //} else {
+                //    // we just lost, time to resign
+                //}
+
+                game_state.next_ack_state = Some(chess_networking::GameState::CheckMate);
             }
 
             return;
@@ -279,6 +289,12 @@ pub(crate) fn wait_for_move(
                 game_state.last_move = Some(*m);
                 move_accepted = true;
                 game_state.board_dirty = true;
+
+                if game_state.next_ack_state.is_none() {
+                    if let GameState::Checkmate = game_state.board_state.check_game_state() {
+                        game_state.next_ack_state = Some(chess_networking::GameState::CheckMate)
+                    }
+                };
             }
         }
 
@@ -289,7 +305,7 @@ pub(crate) fn wait_for_move(
         connection.write(
             (chess_networking::Ack {
                 ok: move_accepted,
-                end_state: None,
+                end_state: game_state.next_ack_state.clone(),
             })
             .try_into()
             .unwrap(),
