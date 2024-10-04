@@ -219,8 +219,6 @@ pub(crate) fn wait_for_move(
     mut game_state: ResMut<ClientGameState>,
     mut network_handler: ResMut<NetworkHandler>,
 ) {
-    println!("{:?}", game_state.network_state);
-
     if game_state.network_state == NetworkState::Normal {
         return;
     }
