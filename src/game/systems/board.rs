@@ -1,16 +1,19 @@
 use bevy::prelude::*;
 use bevy_mod_outline::{OutlineBundle, OutlineMode, OutlineVolume};
 use bevy_mod_picking::PickableBundle;
-use vhultman_chess::{Color as PieceColor, Piece, PieceType};
+use chess_networking::PromotionPiece;
+use vhultman_chess::{Color as PieceColor, GameState, Piece, PieceType};
 
 use std::f32::consts::PI;
 
 use bevy::prelude::Color;
 
-use crate::{
+use crate::game::{
     board_id_to_world_pos, world_pos_to_board_id, ChessPiece, ChessPiecePart, ClientGameState,
-    PieceModelData, SoundEffects,
+    NetworkState, OnGameScreen, PieceModelData,
 };
+use crate::general::resources::NetworkHandler;
+use crate::SoundEffects;
 
 pub(crate) fn spawn_piece(
     commands: &mut Commands,
@@ -59,14 +62,17 @@ pub(crate) fn spawn_piece(
     };
 
     let parent = commands
-        .spawn((SpatialBundle {
-            transform: Transform {
-                translation: position,
-                scale,
-                rotation,
+        .spawn((
+            SpatialBundle {
+                transform: Transform {
+                    translation: position,
+                    scale,
+                    rotation,
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        },))
+            OnGameScreen,
+        ))
         .insert(PickableBundle::default())
         .insert(ChessPiece {
             piece: Piece {
@@ -79,20 +85,26 @@ pub(crate) fn spawn_piece(
 
     for part in parts.iter() {
         let child = commands
-            .spawn((PbrBundle {
-                mesh: part.clone(),
-                material: material.clone(),
-                ..Default::default()
-            },))
-            .insert(OutlineBundle {
-                outline: OutlineVolume {
-                    visible: true,
-                    colour: Color::srgb(0.0, 0.0, 0.0),
-                    width: 2.0,
+            .spawn((
+                PbrBundle {
+                    mesh: part.clone(),
+                    material: material.clone(),
+                    ..Default::default()
                 },
-                mode: OutlineMode::RealVertex,
-                ..Default::default()
-            })
+                OnGameScreen,
+            ))
+            .insert((
+                OutlineBundle {
+                    outline: OutlineVolume {
+                        visible: true,
+                        colour: Color::srgb(0.0, 0.0, 0.0),
+                        width: 2.0,
+                    },
+                    mode: OutlineMode::RealVertex,
+                    ..Default::default()
+                },
+                OnGameScreen,
+            ))
             .insert(ChessPiecePart)
             .id();
 
@@ -201,4 +213,106 @@ pub(crate) fn update_board(
             }
         }
     }
+}
+
+pub(crate) fn wait_for_move(
+    mut game_state: ResMut<ClientGameState>,
+    mut network_handler: ResMut<NetworkHandler>,
+) {
+    println!("{:?}", game_state.network_state);
+
+    if game_state.network_state == NetworkState::Normal {
+        return;
+    }
+
+    //let role = network_handler.role;
+    if let Some(connection) = network_handler.connection.as_mut() {
+        // wait for start packet from server
+        let buf: Vec<u8> = connection.read();
+        if buf.is_empty() {
+            return;
+        }
+
+        if game_state.network_state == NetworkState::AwaitingAck {
+            let packet = chess_networking::Ack::try_from(&buf as &[u8]).expect("Bad packet");
+
+            game_state.next_ack_state = packet.end_state;
+
+            if packet.ok {
+                game_state.network_state = NetworkState::AwaitingMove;
+                println!("received ack packet, its ok! time to make a move for us!");
+            } else {
+                // an illegal move is supposed to make the server win (no matter who doesn't accept
+                // the move), but endstate in the networking specs doesn't support setting who
+                // checkmated who so im just setting checmkate for now no matter what in next ack packet
+                // thus logic below is commented out
+
+                //if role == NetworkRole::Server {
+                //    // we just won, time to send out end state
+                //} else {
+                //    // we just lost, time to resign
+                //}
+
+                game_state.next_ack_state = Some(chess_networking::GameState::CheckMate);
+            }
+
+            return;
+        }
+
+        let packet = chess_networking::Move::try_from(&buf as &[u8]).expect("Bad packet");
+
+        let from_id = square_coords_to_id(packet.from);
+        let to_id = square_coords_to_id(packet.to);
+
+        let possible_moves: Vec<u32> = game_state
+            .board_state
+            .moves_for_square(from_id)
+            .iter()
+            .map(|m| m.to())
+            .collect();
+
+        let mut move_accepted = false;
+        if possible_moves.contains(&to_id) {
+            let mut possible_move = game_state.board_state.get_move(from_id, to_id);
+
+            if let Some(m) = possible_move.as_mut() {
+                if let Some(promotion_piece) = packet.promotion {
+                    m.set_promotion_piece(match promotion_piece {
+                        PromotionPiece::Rook => PieceType::Rook,
+                        PromotionPiece::Knight => PieceType::Knight,
+                        PromotionPiece::Bishop => PieceType::Bishop,
+                        PromotionPiece::Queen => PieceType::Queen,
+                    });
+                }
+
+                game_state.board_state.make_move(*m);
+                game_state.last_move = Some(*m);
+                move_accepted = true;
+                game_state.board_dirty = true;
+
+                if game_state.next_ack_state.is_none() {
+                    if let GameState::Checkmate = game_state.board_state.check_game_state() {
+                        game_state.next_ack_state = Some(chess_networking::GameState::CheckMate)
+                    }
+                };
+            }
+        }
+
+        if move_accepted {
+            game_state.network_state = NetworkState::Normal;
+        }
+
+        connection.write(
+            (chess_networking::Ack {
+                ok: move_accepted,
+                end_state: game_state.next_ack_state.clone(),
+            })
+            .try_into()
+            .unwrap(),
+        );
+    }
+}
+
+fn square_coords_to_id(coords: (u8, u8)) -> u32 {
+    ((7 - coords.1) * 8 + coords.0).into()
 }

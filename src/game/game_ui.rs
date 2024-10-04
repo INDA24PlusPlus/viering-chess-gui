@@ -1,7 +1,10 @@
 use bevy::prelude::*;
+use chess_networking::PromotionPiece;
 use vhultman_chess::{Color as PieceColor, GameState, PieceType};
 
-use crate::ClientGameState;
+use crate::{game::ClientGameState, general::resources::NetworkHandler};
+
+use super::NetworkState;
 
 #[derive(Component)]
 pub struct TurnText;
@@ -14,6 +17,9 @@ pub struct GameStatePopupWindow;
 
 #[derive(Component)]
 pub struct PromotionPopupWindow;
+
+#[derive(Component)]
+pub struct WaitingForOpponentWindow;
 
 #[derive(Component, Clone, Copy, Debug)]
 pub enum PromotionMenuAction {
@@ -31,16 +37,16 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 margin: UiRect {
                     left: Val::Px(12.0),
                     top: Val::Px(12.0),
-                    ..Default::default()
+                    ..default()
                 },
                 flex_direction: FlexDirection::Column,
                 display: Display::Flex,
                 row_gap: Val::Px(6.0),
-                ..Default::default()
+                ..default()
             },
             border_radius: BorderRadius::all(Val::Px(6.0)),
             background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
-            ..Default::default()
+            ..default()
         })
         .with_children(|parent| {
             parent.spawn((
@@ -66,10 +72,10 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
-                    ..Default::default()
+                    ..default()
                 },
                 border_radius: BorderRadius::all(Val::Px(6.0)),
-                ..Default::default()
+                ..default()
             },
             GameStatePopupWindow,
         ))
@@ -81,11 +87,11 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                         flex_direction: FlexDirection::Column,
                         display: Display::Flex,
                         row_gap: Val::Px(6.0),
-                        ..Default::default()
+                        ..default()
                     },
                     border_radius: BorderRadius::all(Val::Px(6.0)),
                     background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
-                    ..Default::default()
+                    ..default()
                 })
                 .with_children(|parent| {
                     parent.spawn((
@@ -102,6 +108,48 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
         });
 
+    // waiting window
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Vw(100.0),
+                    height: Val::Vh(100.0),
+                    display: Display::None,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                ..default()
+            },
+            WaitingForOpponentWindow,
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        display: Display::Flex,
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::all(Val::Px(12.0)),
+                        ..default()
+                    },
+                    border_radius: BorderRadius::all(Val::Px(6.0)),
+                    background_color: Srgba::rgba_u8(255, 255, 255, 100).into(),
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Waiting for opponent...",
+                        TextStyle {
+                            font_size: 24.0,
+                            color: Color::srgb_u8(0, 0, 0),
+                            ..default()
+                        },
+                    ));
+                });
+        });
+
     // promotion window
     commands
         .spawn((
@@ -113,10 +161,9 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     display: Display::None,
-                    ..Default::default()
+                    ..default()
                 },
-                border_radius: BorderRadius::all(Val::Px(6.0)),
-                ..Default::default()
+                ..default()
             },
             PromotionPopupWindow,
         ))
@@ -156,10 +203,15 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             ..default()
                         })
                         .with_children(|parent| {
-                            let button_style = Style {
-                                width: Val::Px(64.0),
-                                aspect_ratio: Some(1.0),
-                                padding: UiRect::all(Val::Px(8.0)),
+                            let button_bundle = ButtonBundle {
+                                style: Style {
+                                    width: Val::Px(64.0),
+                                    aspect_ratio: Some(1.0),
+                                    padding: UiRect::all(Val::Px(8.0)),
+                                    ..default()
+                                },
+                                border_radius: BorderRadius::all(Val::Px(6.0)),
+                                background_color: Srgba::rgb_u8(255, 255, 255).into(),
                                 ..default()
                             };
 
@@ -172,15 +224,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                             for (action, texture) in buttons.iter() {
                                 parent
-                                    .spawn((
-                                        ButtonBundle {
-                                            style: button_style.clone(),
-                                            border_radius: BorderRadius::all(Val::Px(6.0)),
-                                            background_color: Srgba::rgb_u8(255, 255, 255).into(),
-                                            ..default()
-                                        },
-                                        *action,
-                                    ))
+                                    .spawn((button_bundle.clone(), *action))
                                     .with_children(|parent| {
                                         parent.spawn(ImageBundle {
                                             image: UiImage::new(asset_server.load(*texture)),
@@ -199,6 +243,7 @@ pub fn update_ui(
         &mut Style,
         Option<&GameStatePopupWindow>,
         Option<&PromotionPopupWindow>,
+        Option<&WaitingForOpponentWindow>,
     )>,
     mut game_state: ResMut<ClientGameState>,
 ) {
@@ -206,8 +251,12 @@ pub fn update_ui(
         // Update turn text
         if turn_text.is_some() {
             text.sections[0].value = format!(
-                "{}'s turn",
+                "{}'s turn (we are {})",
                 match game_state.board_state.current_side() {
+                    PieceColor::White => "White",
+                    PieceColor::Black => "Black",
+                },
+                match game_state.own_color {
                     PieceColor::White => "White",
                     PieceColor::Black => "Black",
                 }
@@ -216,18 +265,26 @@ pub fn update_ui(
 
         // Update game state text
         if game_state_text.is_some() {
-            text.sections[0].value = match game_state.board_state.check_game_state() {
-                GameState::Playing => "",
-                GameState::Checkmate => "Checkmate",
-                GameState::Stalemate => "Stalemate",
-                GameState::DrawByRepetition => "Draw",
-                GameState::DrawByInsufficientMaterial => "Draw",
+            if let Some(next_ack_state) = &game_state.next_ack_state {
+                text.sections[0].value = match next_ack_state {
+                    chess_networking::GameState::CheckMate => "Checkmate",
+                    chess_networking::GameState::Draw => "Draw",
+                }
+                .to_string();
+            } else {
+                text.sections[0].value = match game_state.board_state.check_game_state() {
+                    GameState::Playing => "",
+                    GameState::Checkmate => "Checkmate",
+                    GameState::Stalemate => "Stalemate",
+                    GameState::DrawByRepetition => "Draw",
+                    GameState::DrawByInsufficientMaterial => "Draw",
+                }
+                .to_string();
             }
-            .to_string();
         }
     }
 
-    for (mut style, game_state_wnd, promotion_wnd) in windows_query.iter_mut() {
+    for (mut style, game_state_wnd, promotion_wnd, opponent_wnd) in windows_query.iter_mut() {
         if game_state_wnd.is_some() {
             // popup window logic
             style.display = match game_state.board_state.check_game_state() {
@@ -243,14 +300,30 @@ pub fn update_ui(
                 style.display = Display::None;
             }
         }
+
+        if opponent_wnd.is_some() {
+            if game_state.board_state.current_side() != game_state.own_color
+                && match game_state.board_state.check_game_state() {
+                    // why no partialeq wtf :sob: :sob: :sob:
+                    GameState::Playing => true,
+                    _ => false,
+                }
+            {
+                style.display = Display::Flex;
+            } else {
+                style.display = Display::None;
+            }
+        }
     }
 }
 
 pub(crate) fn promotion_menu_action(
     menu_action_query: Query<(&PromotionMenuAction, &Interaction), With<Button>>,
     mut game_state: ResMut<ClientGameState>,
+    mut network_handler: ResMut<NetworkHandler>,
 ) {
     for (action, interaction) in &menu_action_query {
+        // Click on one of the promotion piece buttons
         if *interaction == Interaction::Pressed {
             if let Some(mut m) = game_state.pending_promotion_move {
                 m.set_promotion_piece(match action {
@@ -260,9 +333,28 @@ pub(crate) fn promotion_menu_action(
                     PromotionMenuAction::Queen => PieceType::Queen,
                 });
                 game_state.board_state.make_move(m);
+                game_state.network_state = NetworkState::AwaitingAck;
                 game_state.last_move = Some(m);
                 game_state.board_dirty = true;
                 game_state.pending_promotion_move = None;
+
+                let move_packet = chess_networking::Move {
+                    from: (m.from() as u8 % 8, 7 - (m.from() as u8 / 8)),
+                    to: (m.to() as u8 % 8, 7 - (m.to() as u8 / 8)),
+                    promotion: match m.promotion_piece() {
+                        PieceType::Knight => Some(PromotionPiece::Knight),
+                        PieceType::Bishop => Some(PromotionPiece::Bishop),
+                        PieceType::Rook => Some(PromotionPiece::Rook),
+                        PieceType::Queen => Some(PromotionPiece::Queen),
+                        _ => None,
+                    },
+                    forfeit: false,
+                    offer_draw: false,
+                };
+
+                if let Some(connection) = network_handler.connection.as_mut() {
+                    connection.write(move_packet.try_into().unwrap());
+                }
             }
         }
     }

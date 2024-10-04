@@ -1,36 +1,47 @@
 use bevy::prelude::*;
 use bevy_mod_outline::*;
 use bevy_mod_picking::*;
+use bevy_simple_text_input::*;
 
-pub mod components;
-use components::*;
+mod game;
 
-pub mod resources;
-use resources::*;
+mod general;
+use general::resources::SoundEffects;
 
-mod systems;
-use systems::{board, input, resource_setup, setup::setup_game_scene};
+mod main_menu;
+mod splash;
 
-mod utils;
-use utils::*;
+// warning code is a mess, first time using bevy so everything is a mess, also networking lib and
+// my gui game structure didn't work too well together meaning even more spaghetti :D
 
-mod ui;
-use ui::*;
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, States, Default)]
+enum GameState {
+    #[default]
+    Splash,
+    MainMenu,
+    InGame,
+}
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, OutlinePlugin, DefaultPickingPlugins))
-        .add_systems(Startup, resource_setup::setup)
-        .add_systems(PostStartup, (setup_game_scene, setup_ui))
-        .add_systems(
-            Update,
-            (
-                input::handle_picking,
-                update_ui,
-                promotion_menu_action,
-                board::update_board,
-            ),
-        )
-        .insert_resource(ClearColor(Color::srgb_u8(77, 79, 84)))
+        .add_plugins((
+            DefaultPlugins,
+            OutlinePlugin,
+            DefaultPickingPlugins,
+            TextInputPlugin,
+        ))
+        .init_state::<GameState>()
+        .add_systems(Startup, general::setup::setup_resources)
+        .add_plugins((
+            splash::splash_plugin,
+            main_menu::menu_plugin,
+            game::game_plugin,
+        ))
         .run();
+}
+
+fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+    for entity in &to_despawn {
+        commands.entity(entity).despawn_recursive();
+    }
 }

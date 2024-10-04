@@ -1,10 +1,10 @@
 use bevy::{
     asset::Handle,
-    audio::AudioSource,
     pbr::StandardMaterial,
     prelude::{Mesh, Resource},
 };
 use vhultman_chess::ChessMove;
+use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
 
 #[derive(Resource)]
@@ -26,6 +26,13 @@ pub struct SquareResourceData {
     pub selected_square: Handle<StandardMaterial>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum NetworkState {
+    Normal,
+    AwaitingMove,
+    AwaitingAck,
+}
+
 #[derive(Resource)]
 pub struct ClientGameState {
     pub board_state: Position,
@@ -34,12 +41,7 @@ pub struct ClientGameState {
     pub board_dirty: bool,
     pub last_move: Option<ChessMove>,
     pub pending_promotion_move: Option<ChessMove>,
-}
-
-#[derive(Resource)]
-pub struct SoundEffects {
-    pub select: Handle<AudioSource>,
-    pub capture: Handle<AudioSource>,
-    pub valid_move: Handle<AudioSource>,
-    pub illegal_move: Handle<AudioSource>,
+    pub own_color: PieceColor,
+    pub network_state: NetworkState,
+    pub next_ack_state: Option<chess_networking::GameState>,
 }

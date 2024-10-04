@@ -1,7 +1,9 @@
 use bevy::prelude::*;
+use vhultman_chess::Color as PieceColor;
 use vhultman_chess::Position;
 
-use crate::{ClientGameState, PieceModelData, SoundEffects, SquareResourceData};
+use crate::game::NetworkState;
+use crate::game::{ClientGameState, PieceModelData, SquareResourceData};
 
 pub(crate) fn setup(
     mut commands: Commands,
@@ -9,14 +11,14 @@ pub(crate) fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // piece meshes
-    let knight: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh0/Primitive0");
-    let queen: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh1/Primitive0");
-    let king: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh2/Primitive0");
-    let pawn: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh3/Primitive0");
-    let bishop_p1: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh4/Primitive0");
-    let bishop_p2: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh5/Primitive0");
-    let rook_p1: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh6/Primitive0");
-    let rook_p2: Handle<Mesh> = asset_server.load("chess_pieces.glb#Mesh7/Primitive0");
+    let knight: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh0/Primitive0");
+    let queen: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh1/Primitive0");
+    let king: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh2/Primitive0");
+    let pawn: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh3/Primitive0");
+    let bishop_p1: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh4/Primitive0");
+    let bishop_p2: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh5/Primitive0");
+    let rook_p1: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh6/Primitive0");
+    let rook_p2: Handle<Mesh> = asset_server.load("models/chess_pieces.glb#Mesh7/Primitive0");
 
     // piece color materials
     let white_material = materials.add(StandardMaterial {
@@ -63,12 +65,8 @@ pub(crate) fn setup(
         board_dirty: true,
         last_move: None,
         pending_promotion_move: None,
+        own_color: PieceColor::White,
+        network_state: NetworkState::Normal,
+        next_ack_state: None,
     });
-
-    commands.insert_resource(SoundEffects {
-        select: asset_server.load("select.ogg"),
-        capture: asset_server.load("capture.ogg"),
-        illegal_move: asset_server.load("illegal.ogg"),
-        valid_move: asset_server.load("move.ogg"),
-    })
 }
