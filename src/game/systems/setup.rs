@@ -27,7 +27,7 @@ pub fn setup_game_scene(
     // TODO TEMPORARY MOVE THIS IT IS NOT PART OF SCENE
     match network_handler.role {
         NetworkRole::Server => {
-            network_handler.connection = Some(Connection::new_server("127.0.0.1:22022"));
+            network_handler.connection = Some(Connection::new_server("0.0.0.0:22022"));
 
             if let Some(connection) = network_handler.connection.as_mut() {
                 let packet = chess_networking::Start::try_from(&connection.read() as &[u8])

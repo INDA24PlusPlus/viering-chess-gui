@@ -257,6 +257,7 @@ pub(crate) fn wait_for_move(
             return;
         }
 
+        println!("{:?}", buf);
         let packet = chess_networking::Move::try_from(&buf as &[u8]).expect("Bad packet");
 
         let from_id = square_coords_to_id(packet.from);
